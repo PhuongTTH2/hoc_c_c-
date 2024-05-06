@@ -1,0 +1,467 @@
+Data Type             Memory (bytes)          Range                      Format Specifier
+short int                   2          -32,768 to 32,767                       %hd
+unsigned short int          2           0 to 65,535                            %hu
+unsigned int                4           0 to 4,294,967,295                     %u
+int                         4          -2,147,483,648 to 2,147,483,647         %d
+long int                    4          -2,147,483,648 to 2,147,483,647         %ld
+unsigned long int           4           0 to 4,294,967,295                     %lu
+long long int               8          -(2^63) to (2^63)-1                     %lld
+unsigned long long int      8           0 to 18,446,744,073,709,551,615        %llu
+signed char                 1          -128 to 127                             %c 
+unsigned char               1           0 to 255                               %c
+float                       4               -                                  %f
+double                      8               -                                  %lf
+long double                 12              -                                  %Lf
+
+
+Lớp lưu trữ register trong C/C++ được sử dụng để định nghĩa các biến cục bộ mà nên được lưu giữ trong một thanh ghi thay vì RAM
+Lớp lưu trữ auto trong C/C++ là lớp lưu trữ mặc định cho tất cả biến cục bộ trong C/C++:
+Với một hàm inline, trình biên dịch cố gắng mở rộng code trong thân hàm thế chỗ cho một lời gọi tới hàm đó
+Hàm friend được cho phép truy cập tới các thành viên là private và protected của một lớp
+copy constructor là một constructor mà tạo một đối tượng bằng việc khởi tạo nó với một đối tượng của cùng lớp đó, mà đã được tạo trước đó
+Một class constructor là một hàm đặc biệt trong một lớp mà được gọi khi một đối tượng mới của lớp đó được tạo. Một class destructor cũng là một hàm đặc biệt mà được gọi khi đối tượng đã tạo bị hủy
+
+sử dụng typedef để cung cấp một tên cho người sử dụng kiểu dữ liệu đã được định nghĩa.
+
+typedef unsigned char BYTE;
+BYTE  b1, b2;
+typedef kieu_du_lieu ten_moi; 
+typedef float sothuc;
+sothuc vantoc;
+
+enum hanghoa { sua, nuocngot, biachai } c;
+c = nuocngot;
+
+string
+char loiChao[6] = {'H', 'e', 'l', 'l', 'o', '\0'};
+char loiChao[] = "Hello";
+
+array
+int hanghoa[5] = {45, 34, 29, 67, 49};
+int hanghoa[] = {45, 34, 29, 67, 49};
+
+
+///////////////////////////////////////////////////////////
+Nạp chồng hàm (function overloading)
+
+#include <iostream>
+using namespace std;
+ 
+class inDuLieu 
+{
+   public:
+      void hamIn(int i) {
+        cout << "In so nguyen: " << i << endl;
+      }
+
+      void hamIn(double  f) {
+        cout << "In so thuc: " << f << endl;
+      }
+
+     #include <iostream>
+using namespace std;
+ 
+class inDuLieu 
+{
+   public:
+      void hamIn(int i) {
+        cout << "In so nguyen: " << i << endl;
+      }
+
+      void hamIn(double  f) {
+        cout << "In so thuc: " << f << endl;
+      }
+
+      void hamIn(const char* c) {
+        cout << "In ky tu: " << c << endl;
+      }
+    // bị lỗi khi không khai báo const
+    //    void hamIn( char* c) {
+    //     cout << "In ky tu: " << c << endl;
+    //   }
+};
+
+int main(void)
+{
+   inDuLieu idl;
+ 
+   // Goi ham hamIn de in so nguyen
+   idl.hamIn(12345);
+   // Goi ham hamIn de in so thuc
+   idl.hamIn(6677.02);
+   // Goi ham hamIn de in ky tu
+   idl.hamIn("Hoc C++ co ban va nang cao tai vietjack.com");
+ 
+   return 0;
+}
+};
+
+int main(void)
+{
+   inDuLieu idl;
+ 
+   // Goi ham hamIn de in so nguyen
+   idl.hamIn(12345);
+   // Goi ham hamIn de in so thuc
+   idl.hamIn(6677.02);
+   // Goi ham hamIn de in ky tu
+   idl.hamIn("Hoc C++ co ban va nang cao tai vietjack.com");
+ 
+   return 0;
+}
+///////////////////////////////////////////////////////////
+kết thừa
+
+#include <iostream>
+ 
+using namespace std;
+
+// lop co so: Hinh
+class Hinh 
+{
+   public:
+      void setChieuRong(int rong)
+      {
+         chieurong = rong;
+      }
+      void setChieuCao(int cao)
+      {
+         chieucao = cao;
+      }
+   protected:
+      int chieurong;
+      int chieucao;
+};
+
+// day la lop ke thua: HinhChuNhat
+class HinhChuNhat: public Hinh
+{
+   public:
+      int tinhDienTich()
+      { 
+         return chieurong * chieucao; 
+      }
+};
+
+int main(void)
+{
+   HinhChuNhat Hcn;
+ 
+   Hcn.setChieuRong(14);
+   Hcn.setChieuCao(30);
+
+   // in dien tich cua doi tuong.
+   cout << "Tong dien tich la: " << Hcn.tinhDienTich() << endl;
+
+   return 0;
+}
+///////////////////////////////////////////////////////////
+Đa hình (polymorphism) 
+
+#include <iostream> 
+using namespace std;
+
+int dt=0; 
+class Hinh {
+   protected:
+      int chieurong, chieucao;
+   public:
+      Hinh( int a=0, int b=0)
+      {
+         chieurong = a;
+         chieucao = b;
+      }
+      virtual int dientich() // Đặt phương thức dientich là virtual
+      {
+         cout << "Dien tich cua lop cha:" <<endl;
+         return 0;
+      }
+};
+class HinhChuNhat: public Hinh{
+   public:
+      HinhChuNhat( int a=0, int b=0):Hinh(a, b) { }
+      int dientich () override // override phương thức ở lớp cơ sở
+      { 
+         dt= (chieurong * chieucao);
+         cout << "Dien tich cua lop HinhChuNhat la: " << dt << endl;
+         return dt; // Trả về giá trị diện tích
+      }
+};
+class TamGiac: public Hinh{
+   public:
+      TamGiac( int a=0, int b=0):Hinh(a, b) { }
+      int dientich () override // override phương thức ở lớp cơ sở
+      { 
+         dt= (chieurong * chieucao / 2);
+         cout << "Dien tich cua lop TamGiac la: " << dt << endl;
+         return dt; // Trả về giá trị diện tích
+      }
+};
+// ham main cua chuong trinh
+int main( )
+{
+   Hinh *hinh;
+   HinhChuNhat hcn(13,6);
+   TamGiac  tag(8, 9);
+
+   // luu giu dia chi cua HinhChuNhat
+   hinh = &hcn;
+   // goi dien tich cua hinh chu nhat.
+   hinh->dientich();
+
+   // luu giu dia chi cua TamGiac
+   hinh = &tag;
+   // goi dien tich cua tam giac.
+   hinh->dientich();
+   
+   return 0;
+} 
+
+///////////////////////////////////////////////////////////
+Lớp trừu tượng (Abstract class)
+
+#include <iostream>
+ 
+using namespace std;
+ 
+// day la lop co so (base class)
+class Hinh 
+{
+public:
+   // khai bao pure virtual function
+   virtual int tinhDienTich() = 0;
+   void setChieuRong(int rong)
+   {
+      chieurong = rong;
+   }
+   void setChieuCao(int cao)
+   {
+      chieucao = cao;
+   }
+protected:
+   int chieurong;
+   int chieucao;
+};
+ 
+// cac lop ke thua
+class HinhChuNhat: public Hinh
+{
+public:
+   int tinhDienTich()
+   { 
+      return (chieurong * chieucao); 
+   }
+};
+class TamGiac: public Hinh
+{
+public:
+   int tinhDienTich()
+   { 
+      return (chieurong * chieucao)/2; 
+   }
+};
+ 
+int main(void)
+{
+   HinhChuNhat hcn;
+   TamGiac  tag;
+ 
+   hcn.setChieuRong(25);
+   hcn.setChieuCao(4);
+   // in dien tich cua doi tuong
+   cout << "Tong dien tich HinhChuNhat la: " << hcn.tinhDienTich() << endl;
+
+   tag.setChieuRong(20);
+   tag.setChieuCao(15);
+   // in dien tich cua doi tuong.
+   cout << "Tong dien tich TamGiac la: " << tag.tinhDienTich() << endl; 
+
+   return 0;
+}
+
+
+///////////////////////////////////////////////////////////
+namespace
+
+#include <iostream>
+using namespace std;
+
+// day la namespace dau tien
+namespace dau_tien{
+   void ham(){
+      cout << "Ben trong namespace dau_tien" << endl;
+   }
+}
+// day la namespace thu hai
+namespace thu_hai{
+   void ham(){
+      cout << "Ben trong namespace thu_hai" << endl;
+   }
+}
+int main ()
+{
+ 
+   // goi ham tu namespace dau tien.
+   dau_tien::ham();
+   
+   // goi ham tu namespace thu hai.
+   thu_hai::ham(); 
+
+   return 0;
+}
+
+///////////////////////////////////////////////////////////
+Bộ tiền xử lý (Preprocessor)
+
+#include: Dùng để bao gồm một tệp mã nguồn khác vào mã nguồn hiện tại.
+#define và #undef: Dùng để định nghĩa và hủy định nghĩa các macros.
+#ifdef, #ifndef, #endif và #else: Sử dụng để tạo điều kiện biên dịch, thực hiện một phần của mã dựa trên việc macros đã được định nghĩa hay không.
+#if, #elif: Sử dụng để thực hiện điều kiện biên dịch phức tạp hơn, dựa trên giá trị của các macros hoặc các biểu thức số học.
+#pragma: Dùng để cung cấp các chỉ thị cho trình biên dịch, như đặt cảnh báo hoặc thông báo lỗi, hoặc điều khiển tối ưu hóa.
+#line: Dùng để thay đổi số dòng và tên tệp được sử dụng trong thông báo lỗi và cảnh báo.
+## (Token Concatenation): Cho phép nối các token lại với nhau.
+#error và #warning: Dùng để phát ra thông báo lỗi hoặc cảnh báo trong quá trình biên dịch.
+FILE và LINE: Được thay thế bằng tên tệp và số dòng hiện tại của mã nguồn.
+
+#define	Thay thể cho bộ tiền xử lý macro
+#include	Chèn một header đặc biệt từ file khác
+#undef	Không định nghĩa một macro tiền xử lý
+#ifdef	Trả về giá trị true nếu macro này được định nghĩa
+#ifndef	Trả về giá trị true nếu macro này không được định nghĩa
+#if	Kiểm tra nếu điều kiện biên dịch là đúng
+#else	Phần thay thế cho #if
+#elif	#else một #if trong một lệnh
+#endif	Kết thúc điều kiện tiền xử lý
+#error	In thông báo lỗi trên stderr
+#pragma	Thông báo các lệnh đặc biệt đến bộ biên dịch, sử dụng một phương thức được tiêu chuẩn hóa
+
+#include <iostream>
+using namespace std;
+
+// #define macro
+#define PI 3.14159
+
+// #ifdef và #ifndef
+#ifndef MAX_VALUE
+#define MAX_VALUE 100
+#endif
+
+// #if và #elif
+#if defined(DEBUG_MODE)
+#define LOG(message) cout << "DEBUG: " << message << endl;
+#elif defined(RELEASE_MODE)
+#define LOG(message)
+#else
+#define LOG(message) cerr << "Error: Logging is disabled!" << endl;
+#endif
+
+// #pragma once
+#pragma once
+
+// #error và #warning
+#ifndef MY_MACRO
+#error "MY_MACRO is not defined!"
+#endif
+
+#ifndef MY_CONSTANT
+#warning "MY_CONSTANT is not defined!"
+#endif
+
+int main() {
+    // Sử dụng macros được định nghĩa trước đó
+    double radius = 5.0;
+    double area = PI * radius * radius;
+    cout << "Area of circle: " << area << endl;
+
+    // Sử dụng macros và điều kiện biên dịch để đảm bảo giá trị tối đa
+    int value = 120;
+    if (value > MAX_VALUE) {
+        cout << "Value exceeds maximum allowed value." << endl;
+    }
+
+    // Sử dụng macros để in log trong các chế độ khác nhau
+    LOG("This is a debug message");
+
+    return 0;
+}
+
+#include <iostream>
+
+// Định nghĩa macro DEBUG_MODE
+#define DEBUG_MODE
+
+int main() {
+#ifdef DEBUG_MODE
+    std::cout << "Debug mode is enabled." << std::endl;
+#else
+    std::cout << "Debug mode is disabled." << std::endl;
+#endif
+
+// Sử dụng #if defined() để kiểm tra sự tồn tại của macro
+#if defined(DEBUG_MODE)
+    std::cout << "Debug mode is enabled." << std::endl;
+#else
+    std::cout << "Debug mode is disabled." << std::endl;
+#endif
+
+    return 0;
+}
+
+
+///////////////////////////////////////////////////////////
+Trường Bit trong C
+
+#include <stdio.h>
+#include <string.h>
+
+/* dinh nghia mot cau truc don gian */
+struct
+{
+  unsigned int chieurong;
+  unsigned int chieucao;
+} trangthai1;
+
+/* dinh nghia mot cau truc voi cac truong bit */
+struct
+{
+  unsigned int chieurong : 1;
+  unsigned int chieucao : 1;
+} trangthai2;
+ 
+int main( )
+{
+   printf( "Bo nho bi chiem giu boi trangthai1 la: %d\n", sizeof(trangthai1));
+   printf( "Bo nho bi chiem giu boi trangthai2 la: %d\n", sizeof(trangthai2));
+
+   return 0;
+}
+
+Bo nho bi chiem giu boi trangthai1 la: 8
+Bo nho bi chiem giu boi trangthai2 la: 4
+
+
+#include <stdio.h>
+
+struct {
+    unsigned int flag : 1; // Trường bit có 1 bit, chỉ có thể lưu trữ giá trị 0 hoặc 1
+} status;
+
+int main() {
+    status.flag = 1; // Gán giá trị 1 cho trường bit
+    printf("Flag: %d\n", status.flag); // In ra giá trị của trường bit
+    return 0;
+}
+
+#include <stdio.h>
+
+struct {
+    unsigned int flag : 2;
+} status;
+
+int main() {
+    status.flag = 3; // => 4 sẽ bị lỗi 
+    printf("Flag: %d\n", status.flag); // In ra giá trị của trường bit
+    return 0;
+}
+Thì trường flag này chỉ có thể lưu trữ các giá trị từ 0 đến 3 (bao gồm cả 0 và 3), vì số lượng bit chỉ là 2 bit. 
+Tức là có thể biểu diễn được 4 giá trị khác nhau (00, 01, 10, 11).
