@@ -465,3 +465,43 @@ int main() {
 }
 Thì trường flag này chỉ có thể lưu trữ các giá trị từ 0 đến 3 (bao gồm cả 0 và 3), vì số lượng bit chỉ là 2 bit. 
 Tức là có thể biểu diễn được 4 giá trị khác nhau (00, 01, 10, 11).
+
+
+///////////////////////////////////////////////////////////
+Unit Test:
+#include <gtest/gtest.h>
+
+int Add(int a, int b) {
+    return a + b;
+}
+
+TEST(AddTest, PositiveNumbers) {
+    EXPECT_EQ(5, Add(2, 3));
+}
+
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
+
+///////////////////////////////////////////////////////////
+Macro & Bit Operations
+#define bitset(byte,nbit)   ((byte) |=  (1<<(nbit)))
+#define bitclear(byte,nbit) ((byte) &= ~(1<<(nbit)))
+#define bitflip(byte,nbit)  ((byte) ^=  (1<<(nbit)))
+#define bitcheck(byte,nbit) ((byte) &   (1<<(nbit)))
+
+
+///////////////////////////////////////////////////////////
+Compliler
+1 Preprocessing: Đây là bước tiền xử lý mã nguồn, các preprocessor sẽ tiến hành xử lý, thay thế các macro/define và các file header được include trong mã nguồn.
+2 Compilation: Trình biên dịch ( Compiler) sẽ lấy kết quả của quá trình Preprocessing và tạo ra file object từ tệp tin đó.
+3 Assembly:  Chuyển chúng sang dạng mã Assembly là một ngôn ngữ bậc thấp (hợp ngữ) gần với tập lệnh của bộ vi xử lý.
+4 Linking: Trình liên kết ( linker) lấy các file object được tạo ra từ Compiler và tiến hành xử lý, tạo ra các thư viện (lib,dll…) hoặc file thực thi (.exe,.bin…) cho người dùng.
+5 Optimization (Tối ưu hóa): Trong một số trường hợp, có thể thực hiện quá trình tối ưu hóa sau khi biên dịch để cải thiện hiệu suất của chương trình. Quá trình tối ưu hóa này có thể được thực hiện trước hoặc sau khi liên kết.
+
+///////////////////////////////////////////////////////////
+1 Code Segment: Là nơi mà lưu trữ các mã lệnh đã được biên dịch của các chương trình máy tính
+2 Data Segment: Vùng nhớ dữ liệu tĩnh được sử dụng để lưu trữ các biến toàn cục và static, bao gồm cả các biến được khai báo bên ngoài các hàm và các biến static bên trong hàm. Các biến trong vùng nhớ này được khởi tạo một lần và tồn tại suốt thời gian chạy của chương trình.
+3 Heap Segment: Là vùng nhớ được sử dụng để cấp phát bộ nhớ cho chương trình thông qua kĩ thuật Cấp phát bộ nhớ động 
+4 Call Stack Segment: Vùng nhớ stack được sử dụng để lưu trữ các biến cục bộ và các thông tin của hàm, bao gồm các tham số, các biến cục bộ và các địa chỉ trở về của các hàm. Các biến trên stack được tạo ra và hủy đi theo thứ tự trên cùng vào dưới cùng của stack, theo cơ chế "Last In, First Out" (LIFO).

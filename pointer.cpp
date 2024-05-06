@@ -11,3 +11,51 @@
 5 Ở đây “a” là một con trỏ const tới một số nguyên const, có nghĩa là cả giá trị của số nguyên nhọn và con trỏ đều không thể sửa đổi được.
 
 
+
+#include<stdio.h>
+void fun(int *p)
+{
+  int q = 40;
+  p = &q;
+}
+int main()
+{
+  int data = 27;
+  int *ptr = &data;
+  fun(ptr);
+  printf("%d", *ptr);
+  return 0;
+}
+// => 27
+
+#include<stdio.h>
+void fun(int **p)
+{
+  static int q = 40;
+  *p = &q;
+}
+int main()
+{
+  int data = 27;
+  int *ptr = &data;
+  fun(&ptr);
+  printf("%d", *ptr);
+  return 0;
+}
+// => 40
+
+#include<stdio.h>
+void fun(int *p)
+{
+  int q = 40;
+  *p = q;
+}
+int main()
+{
+  int data = 27;
+  int *ptr = &data;
+  fun(ptr);
+  printf("%d", *ptr);
+  return 0;
+}
+// => 40
