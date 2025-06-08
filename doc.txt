@@ -1,12 +1,13 @@
 test dev 1
 test dev 11111
 
-<<<<<<< .mine
 test dev2222
 
 test dev 11
-=======
+
 test dev 11
 A
+A
 
->>>>>>> .theirs
+AA
+A
