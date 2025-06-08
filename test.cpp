@@ -339,4 +339,5 @@ int main()
 // B::override();
 // override: 42
 // B::~B();
-// A::~A();
+
+//AA//bb
