@@ -1,0 +1,26 @@
+name: C++ CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install -y g++
+
+    - name: Build snake_game
+      run: g++ snake_game.cpp -o snake_game
+
+    # Nếu có test, thêm bước test:
+    # - name: Build and run tests
+    #   run: |
+    #     g++ snake_game_gtest.cpp -lgtest -lgtest_main -pthread -o snake_game_test
+    #     ./snake_game_test
