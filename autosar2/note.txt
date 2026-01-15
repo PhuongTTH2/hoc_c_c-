@@ -1,0 +1,98 @@
+AUTOSAR API → MCAL Driver → Hardware Abstraction → BAT32A2x9 Registers
+    │              │              │                    │
+I2C_Init() → I2C_Hw_InitChannel() → PER0, PMxx, PxxCFG → Enable clocks & pins
+    │              │              │                    │
+I2C_SetupEB() → Stores buffer pointers → No hardware access
+    │              │              │                    │
+I2C_AsyncTransmit() → I2C_Hw_StartTransmit() → IICAx, IICCTL0x → Generate START
+    │              │              │                    │
+I2C_MainFunction() → I2C_Hw_GetStatus() → IICSx → Check flags
+    │              │              │                    │
+IRQ Handler → I2C_Hw_ClearStatus() → IICSx → Clear interrupt
+
+
+
+Requirements Mapping Summary
+Mỗi function đã implement các requirements sau:
+
+I2C_Init:
+[CP_SWS_I2C_82002] - Initialization requirements
+
+I2C_DeInit:
+[CP_SWS_I2C_82105] - Deinitialization
+
+[CP_SWS_I2C_82108] - Development error detection
+
+I2C_SetupEB:
+[CP_SWS_I2C_00101] - Buffer pointer validation
+
+[CP_SWS_I2C_00102] - Controller mode buffer setup
+
+[CP_SWS_I2C_00103] - Node address override
+
+[CP_SWS_I2C_00104] - JobId validation
+
+[CP_SWS_I2C_00105] - Target mode read setup
+
+[CP_SWS_I2C_00106] - Target mode write setup
+
+I2C_AsyncTransmit:
+[CP_SWS_I2C_00310] - SequenceId validation
+
+[CP_SWS_I2C_82303] - No transmission ongoing
+
+[CP_SWS_I2C_82304] - Another transmission ongoing (queue)
+
+[CP_SWS_I2C_82305] - Same transmission ongoing
+
+[CP_SWS_I2C_82307] - Multiple jobs handling
+
+[CP_SWS_I2C_82308] - Continuation with queued elements
+
+[CP_SWS_I2C_82309] - SetupEB validation
+
+I2C_SyncTransmit:
+[CP_SWS_I2C_00410] - SequenceId validation
+
+[CP_SWS_I2C_82403] - No transmission ongoing
+
+[CP_SWS_I2C_82404] - Another transmission ongoing
+
+[CP_SWS_I2C_82407] - Multiple jobs handling
+
+[CP_SWS_I2C_82409] - SetupEB validation
+
+I2C_GetVersionInfo:
+[CP_SWS_I2C_82601] - Pointer validation
+
+I2C_GetSequenceResult:
+[CP_SWS_I2C_80701] - Sequence result values
+
+[CP_SWS_I2C_80702] - SequenceId validation
+
+I2C_StartListening:
+[CP_SWS_I2C_82806] - SetupEB validation
+
+[CP_SWS_I2C_80801] - No listening ongoing
+
+[CP_SWS_I2C_80802] - Already listening check
+
+[CP_SWS_I2C_80803] - Message/error received handling
+
+[CP_SWS_I2C_80804] - Target mode check
+
+[CP_SWS_I2C_80805] - Wrong mode runtime error
+
+[CP_SWS_I2C_80806] - Message data handling
+
+I2C_MainFunction:
+[CP_SWS_I2C_80901] - Permanent listening handling
+
+Error Reporting:
+[CP_SWS_I2C_00702] - FIFO handling error
+
+[CP_SWS_I2C_00703] - NACK received error
+
+[CP_SWS_I2C_00704] - Arbitration failure
+
+[CP_SWS_I2C_00705] - Bus failure
