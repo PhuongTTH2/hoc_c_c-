@@ -1,0 +1,27 @@
+Cách lập trình Simplified I2C thực tế:
+c
+// 1. Cấu hình chân SDA/SCL
+PMxx_bit = 0; // Chế độ output
+POMxx_bit = 0; // Push-pull
+
+// 2. Cấu hình USCU thành Simplified I2C mode
+SMRmn = 0xXX; // Set mode = Simplified I2C
+
+// 3. Set tốc độ
+SPSm = ...; // Chọn clock source
+
+// 4. Kích hoạt
+SEmn = 1; // Enable channel
+
+// 5. Tạo START condition bằng tay
+SOEmn = 1; // Enable output
+// ... set SDA, SCL bằng tay
+
+// 6. Gửi địa chỉ slave + data
+SDRmn = (slave_addr << 1) | R_W_bit;
+
+// 7. Chờ cờ truyền xong
+while(!SSRmn_TEND);
+
+// 8. Tạo STOP condition bằng tay
+// ... reset SDA, SCL bằng tay
