@@ -25,3 +25,19 @@ while(!SSRmn_TEND);
 
 // 8. Tạo STOP condition bằng tay
 // ... reset SDA, SCL bằng tay
+
+
+TIÊU CHÍ	SIMPLIFIED I2C	FULL I2C - MASTER	FULL I2C - SLAVE
+Chế độ hoạt động	Chỉ Master	Master	Slave
+Multi-master	❌ Không hỗ trợ	✅ Hỗ trợ (arbitration)	N/A
+Clock Speed	Standard (100kHz), Fast (400kHz)	Standard, Fast, Fast+ (1MHz), High-speed (3.4MHz)	Theo Master
+Thanh ghi điều khiển	SMRmn, SCRmn, SSRmn, SIRmn (USCU)	IICCTL0/1, IICCTL0/1, IICCTL0/1 (chuyên dụng)	IICCTL0/1, SVA0/1 (address)
+Baud Rate Setup	Đơn giản qua SPSm register	Phức tạp: IICWLn + IICWHn	Theo Master
+START/STOP Condition	Manual (toggle GPIO)	Auto (bit IICCSC/IICCSP)	Auto detect
+ACK/NACK Handling	Manual kiểm tra cờ	Auto ACK generation/detection	Auto ACK response
+Data Register	SDRmn (8/16-bit)	IICAn (8-bit)	IICAn (8-bit)
+Interrupt Sources	Transfer end, ACK error, Overflow	Transfer end, NACK, Arbitration lost, Stop, Start	Address match, Data ready
+Clock Stretching	❌ Không hỗ trợ	✅ Hỗ trợ (wait detection)	✅ Có thể stretch
+Pin Configuration	GPIO + Port mux (PxxCFG)	Chuyên dụng hoặc mux	Chuyên dụng hoặc mux
+
+

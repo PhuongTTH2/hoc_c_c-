@@ -1,0 +1,32 @@
+// Module Parameter	Pre-Compile	Post-Build	Lý do
+// I2cDevErrorDetect	✓	✗	Safety - Không cho disable lỗi runtime
+// I2cVersionInfoApi	✓	✗	Debug feature - Fixed at compile
+// I2cBaudRate	        ✓	✓	Có thể tune cho từng ECU
+// I2cHwUnitBaseAddress	✗	✓	Phụ thuộc hardware layout
+// I2cTargetListening	✓	✓	Tùy application requirement
+// I2cDeviceAddress	    ✓	✓	Có thể thay đổi sensor
+// I2cEndNotification	✗	✓	Callback phụ thuộc application
+
+Simplified I²C
+Chỉ hỗ trợ Master mode đơn giản.
+
+Không hỗ trợ multi-master, arbitration, clock stretching.
+
+Phù hợp cho giao tiếp với cảm biến, EEPROM đơn giản.
+
+Có thể dùng cho channel 0 (Master).
+
+IICA 
+Hỗ trợ full I²C protocol, bao gồm:
+
+Multi-master
+
+Arbitration
+
+Clock stretching
+
+Wake-up mode
+
+Slave mode
+
+Có thể dùng cho channel 1 (Slave/Target).

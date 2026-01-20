@@ -1,0 +1,326 @@
+Danh sách test cần thực hiện cho Simple I2C
+1. Test Data Transmission & Reception
+1.1 Master Transmission (Gửi dữ liệu)
+Gửi 7-bit địa chỉ + bit R/W = 0 (write)
+
+Gửi 1 hoặc nhiều byte data
+
+Kiểm tra ACK từ slave sau mỗi byte
+
+Test case:
+
+Gửi 1 byte
+
+Gửi nhiều byte (burst write)
+
+Gửi đến slave không tồn tại (ACK error)
+
+1.2 Master Reception (Nhận dữ liệu)
+Gửi 7-bit địa chỉ + bit R/W = 1 (read)
+
+Nhận 1 hoặc nhiều byte
+
+Test case:
+
+Nhận 1 byte, gửi NACK sau byte cuối
+
+Nhận nhiều byte, gửi ACK trước mỗi byte trừ byte cuối
+
+Kiểm tra việc tắt ACK cho byte cuối (clear SOEmn bit)
+
+1.3 Start/Stop Condition Manual Control
+Tạo Start condition bằng phần mềm
+
+Tạo Stop condition bằng phần mềm
+
+Test case:
+
+Repeated Start (nếu hỗ trợ)
+
+Stop ngay sau Start (không truyền data)
+
+2. Test Interrupt Function
+2.1 Transfer End Interrupt
+Bật ngắt khi truyền xong
+
+Kiểm tra cờ ngắt và ISR được gọi
+
+Test case:
+
+Ngắt sau gửi xong 1 byte
+
+Ngắt sau nhận xong 1 byte
+
+Ngắt sau gửi nhiều byte
+
+2.2 Interrupt Enable/Disable
+Test việc enable/disable ngắt có hoạt động đúng
+
+3. Test Error Detection Flags
+3.1 ACK Error Detection
+Gửi đến slave không phản hồi ACK
+
+Kiểm tra cờ lỗi ACK trong thanh ghi trạng thái
+
+Test case:
+
+Slave không kết nối
+
+Địa chỉ slave sai
+
+3.2 Overflow Error Detection
+Ghi/đọc data khi buffer chưa sẵn sàng
+
+Kiểm tra cờ overflow error
+
+Test case:
+
+Ghi data liên tục quá nhanh
+
+Đọc data khi chưa có data mới
+
+4. Test Clock Frequency & Timing
+4.1 SCL Frequency Setting
+Cấu hình các tần số SCL khác nhau qua thanh ghi SPSm, SCRmn
+
+Test case:
+
+100 kHz (Standard mode)
+
+400 kHz (Fast mode)
+
+Các tần số tùy chỉnh khác
+
+4.2 Timing Parameters
+Kiểm tra thời gian Start/Stop condition
+
+Kiểm tra thời gian SCL high/low
+
+5. Test GPIO & Pin Remapping
+5.1 Pin Selection
+Mỗi port I2C có thể map qua nhiều chân (xem Table 2-4)
+
+Test case:
+
+Test mỗi port với các chân GPIO khác nhau (nếu có redirection)
+
+Kiểm tra chế độ open-drain (POM register)
+
+5.2 Bus Loading Test
+Test với các tải bus khác nhau (pull-up resistor khác nhau)
+
+6. Test Multi-Port Concurrent Operation
+6.1 Đồng thời nhiều port
+Chạy IIC00 và IIC10 cùng lúc
+
+Kiểm tra không xung đột
+
+STT	Test Item	Ports Tested	Slave Device	Expected Result
+1	Master Write 1 byte	IIC00, IIC10, IIC20, IIC30	EEPROM (24C02) hoặc I2C GPIO Expander	ACK nhận được, data ghi thành công
+2	Master Read 1 byte	IIC01, IIC11, IIC21, IIC31	EEPROM (24C02) hoặc I2C Sensor	Data nhận đúng, NACK cuối cùng
+3	Burst Write (N byte)	IIC00	EEPROM (24C02) - Page Write	Gửi thành công N byte, ACK sau mỗi byte
+4	Burst Read (N byte)	IIC01	EEPROM (24C02) - Sequential Read	Nhận thành công N byte, ACK trước mỗi byte trừ cuối
+5	ACK Error Detection	Tất cả port	Không kết nối slave / Sai địa chỉ	Cờ lỗi ACK bật = 1
+6	Overflow Error Detection	Tất cả port	Ghi data liên tục quá nhanh	Cờ overflow bật = 1
+7	Transfer End Interrupt	Tất cả port	EEPROM hoặc dummy slave	ISR được gọi, cờ ngắt được clear
+8	SCL Frequency 100kHz/400kHz	IIC00, IIC01	Logic Analyzer đo waveform	Tần số đo được ±5% so với cấu hình
+9	Pin Remapping Test	IIC00 với Pxx khác nhau	EEPROM	Hoạt động trên chân GPIO đã chọn
+10	Multi-port Concurrent	IIC00 + IIC10	2 EEPROM khác nhau (addr khác nhau)	Cả hai port hoạt động độc lập, không conflict 
+
+1. Registers cần config CHO TỪNG CHANNEL:
+
+1. SSRmn    - Serial Status Register          (Clear flags)
+2. SIRmn    - Serial Flag Clear Trigger       (Clear error flags)
+3. SMRmn    - Serial Mode Register            (Set I2C mode)
+4. SCRmn    - Serial Communication Run Setting (MOST IMPORTANT!)
+5. SDRmn    - Serial Data Register            (Set baud rate divider)
+
+2. Unit-level registers cần config:
+
+6. SPSm     - Serial Clock Selection Register (Clock source)
+7. SOm      - Serial Output Register          (Pin output level)
+8. SOEm     - Serial Output Enable Register   (Enable pin output)
+9. SSm/STm  - Start/Stop Registers            (Control channel)
+10. PER0/PER2 - Peripheral Enable             (Enable clock)
+
+3. GPIO config cho mỗi channel:
+
+11. POMxx   - Port Output Mode                (Set to open-drain)
+12. PMxx    - Port Mode                       (Input/Output)
+13. PUxx    - Pull-up Resistor                (Enable pull-up)
+14. PMCxx   - Port Mode Control               (Digital I/O mode)
+
+A. SMRmn (Serial Mode Register):
+
+CKS=0   (Use CKm0)
+CCS=0   (Use divided FMCK)
+STS=0   (Software trigger)
+SIS=0   (Normal edge detection)
+MD2,1=1,0 (Simplified I2C mode)
+MD0=0   (Transfer end interrupt)
+
+B. SCRmn (Serial Communication Run Setting Register) - QUAN TRỌNG NHẤT:
+
+TXEmn=1     (Transmit enable)
+RXEmn=1     (Receive enable)
+DAPmn=0     (Not used in I2C)
+CKPmn=0     (Not used in I2C)
+EOCmn=0     (Error interrupt enabled)
+PTCmn1,0=00 (No parity for I2C)
+DIRmn=0     (MSB first for I2C)
+SLCmn1,0=01 (1 stop bit for I2C)
+DLSmn3-0=0111 (8-bit data for I2C)
+Bit 2=1     (Required fixed value)
+Bits 3,6,11=0 (Required fixed value)
+
+| Thứ tự | Register  | Vai trò                                     |
+| ------ | --------- | ------------------------------------------- |
+| 1      | **SSRmn** | Trạng thái + lỗi (ACK/NACK nằm ở đây)       |
+| 2      | **SIRmn** | Xóa cờ lỗi                                  |
+| 3      | **SMRmn** | Chọn chế độ Simplified I²C                  |
+| 4      | **SCRmn** | **QUAN TRỌNG NHẤT – format dữ liệu, TX/RX** |
+| 5      | **SDRmn** | Baud rate divider (tạo SCL)                 |
+
+
+1. SSRmn – Serial Status Register (READ-ONLY)
+| Bit | Tên     | Ý nghĩa                       |
+| --- | ------- | ----------------------------- |
+| 0   | OVF     | Overflow error                |
+| 1   | **PEF** | **ACK/NACK error (NACK = 1)** |
+| 2   | FEF     | Framing error                 |
+| 6   | BFF     | Buffer full                   |
+| 8   | TSF     | Transfer in progress          |
+
+2. SIRmn – Serial Flag Clear Trigger Register (WRITE-ONLY)
+
+| Bit | Tên  | Clear              |
+| --- | ---- | ------------------ |
+| 0   | OVCT | Overflow           |
+| 1   | PECT | Parity / ACK error |
+| 2   | FECT | Framing            |
+0x0007 = 0000 0000 0000 0111
+         │││└─ FECT = 1
+         ││└── PECT = 1
+         │└─── OVCT = 1
+
+3. SMRmn – Serial Mode Register (MODE SELECT)
+
+| Bit | Tên | Giá trị cho I²C      |
+| --- | --- | -------------------- |
+| 14  | MD2 | 1                    |
+| 13  | MD1 | 0                    |
+| 12  | MD0 | 0                    |
+| 1   | CCS | 0 (internal clock)   |
+| 0   | CKS | 0 (CKm0)             |
+| 9   | SIS | 0                    |
+| 8   | STS | 0 (software trigger) |
+
+0x4000 = 0100 0000 0000 0000
+         │└──────── MD2 = 1
+         └───────── MD1,MD0 = 0 → Simplified I2C
+
+
+4. SCRmn – Serial Communication Run Setting
+
+| Trường    | Giá trị          |
+| --------- | ---------------- |
+| TXEmn     | 1                |
+| RXEmn     | 1                |
+| DAPmn     | 0                |
+| CKPmn     | 0                |
+| EOCmn     | 0                |
+| PTCmn     | 00               |
+| DIRmn     | 0 (MSB first)    |
+| SLCmn     | 01 (1 stop bit)  |
+| DLSmn     | **0111 (8-bit)** |
+| Bit2      | **1 (FIXED)**    |
+| Bit3,6,11 | 0                |
+
+
+| Tiêu chí     | Chapter 19 – Simplified I²C    | Chapter 20 – IICA                            |
+| ------------ | ------------------------------ | -------------------------------------------- |
+| IP           | SCI (UART/SSPI/IIC giả lập)    | **Dedicated I²C Controller**                 |
+| START / STOP | **Software bit-bang** (SO/SOE) | **Hardware tự sinh**                         |
+| ACK/NACK     | Qua PEF flag                   | **ACK tự động**                              |
+| Clock        | SDR divider                    | **IICWL / IICWH**                            |
+| Registers    | SMR / SCR / SDR                | **IICCTLx / IICWL / IICWH / IICSTR / IICSR** |
+| ISR          | SCI interrupt                  | **IICA interrupt**                           |
+| Chuẩn I²C    | Gần đúng                       | **Chuẩn I²C thật**                           |
+
+
+1. IICA (Chapter 20) - Full-featured I2C:
+✅ Hỗ trợ Multi-master (phát hiện arbitration loss)
+
+✅ Cả Master và Slave mode
+
+✅ Interrupt-driven operation
+
+✅ Automatic start/stop condition generation
+
+✅ Address matching với wake-up function
+
+✅ Clock stretching support
+
+2. Simplified I2C (Chapter 19) - Basic I2C:
+❌ Chỉ Master mode
+
+❌ Không hỗ trợ multi-master
+
+❌ Manual start/stop condition generation
+
+❌ Không arbitration detection
+
+✅ Đơn giản, dễ sử dụng
+
+| Tiêu chí         | Simplified I²C        | IICA                |
+| ---------------- | --------------------- | ------------------- |
+| IP               | SCI (UART-based)      | **I²C thật**        |
+| START / STOP     | **Software bit-bang** | **Hardware**        |
+| ACK/NACK         | Flag PEF              | **ACKD / NACKF**    |
+| Clock            | SDR divider           | **IICWL / IICWH**   |
+| Clock stretching | ❌ Không               | ✅ Có                |
+| Arbitration      | ❌ Không               | ✅ Có                |
+| Repeated START   | Khó                   | **Chuẩn**           |
+| ISR support      | Kém                   | **Tốt**             |
+| AUTOSAR phù hợp  | ❌                     | **✅**               |
+| EEPROM/Sensor    | Có thể                | **Chuẩn & ổn định** |
+| Multi-master     | ❌                     | ✅                   |
+| Bus error detect | Rất hạn chế           | **Đầy đủ**          |
+
+. BASIC FUNCTIONALITY TESTS:
+✅ Simplified I2C: Basic write, different data sizes, multiple slaves
+
+✅ IICA: Master write/read, slave mode, multi-master arbitration
+
+✅ Error handling: NACK detection, bus busy, arbitration loss
+
+2. PERFORMANCE TESTS:
+✅ Speed comparison: Standard/Fast/Fast+ modes
+
+✅ Reliability: Repeated operations success rate
+
+✅ Data size scaling: 1-256 byte transfers
+
+3. REAL-WORLD SCENARIOS:
+✅ EEPROM emulation: Page writes, random reads
+
+✅ Sensor communication: Register access, burst reads
+
+✅ Multi-device bus: Multiple slaves on same bus
+
+4. COMPARATIVE ANALYSIS:
+✅ Feature matrix: Side-by-side comparison
+
+✅ Use case recommendations: When to use each
+
+✅ Abstraction layer: Unified interface
+
+5. ADVANCED FEATURES:
+✅ Interrupt handling (IICA only)
+
+✅ Clock stretching (IICA only)
+
+✅ 10-bit addressing (IICA only)
+
+✅ Wake-up function (IICA only)
+

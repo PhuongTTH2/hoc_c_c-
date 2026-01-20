@@ -1,0 +1,734 @@
+ SIMPLIFIED I2C (CHAPTER 19) - 8 CHANNELS
+1. SSRmn - Serial Status Register (Base + 0x00, 0x02, 0x04, 0x06)
+c
+typedef volatile struct {
+    uint8_t OVF   : 1;  // Bit 0: Overflow Error Flag
+    uint8_t PEF   : 1;  // Bit 1: Parity/ACK Error Flag
+    uint8_t FEF   : 1;  // Bit 2: Framing Error Flag
+    uint8_t       : 3;  // Bit 3-5: Reserved
+    uint8_t BFF   : 1;  // Bit 6: Buffer Full Flag
+    uint8_t       : 1;  // Bit 7: Reserved
+    uint8_t TSF   : 1;  // Bit 8: Transfer Status Flag
+    uint8_t       : 7;  // Bit 9-15: Reserved
+} SSR_Bits_t;
+Chi tiết từng bit:
+
+OVF (Bit 0): 1 = Overflow error (nhận byte mới khi buffer chưa đọc)
+
+PEF (Bit 1): 1 = Parity/ACK error (NACK received trong I2C mode)
+
+FEF (Bit 2): 1 = Framing error (detect STOP bit sai)
+
+BFF (Bit 6): 1 = Buffer full (data đã được ghi vào shift register)
+
+TSF (Bit 8): 1 = Transfer in progress, 0 = Transfer complete
+
+Cách clear flags: Ghi 1 vào bit tương ứng trong SIRmn
+
+2. SIRmn - Serial Flag Clear Trigger Register (Base + 0x08, 0x0A, 0x0C, 0x0E)
+c
+typedef volatile struct {
+    uint8_t OVCT  : 1;  // Bit 0: Overflow Clear Trigger
+    uint8_t PECT  : 1;  // Bit 1: Parity Error Clear Trigger
+    uint8_t FECT  : 1;  // Bit 2: Framing Error Clear Trigger
+    uint8_t       : 5;  // Bit 3-7: Reserved
+    uint8_t       : 8;  // Bit 8-15: Reserved
+} SIR_Bits_t;
+Chi tiết:
+
+Ghi 1 vào bit để clear flag tương ứng trong SSRmn
+
+Sau khi ghi, bit tự động về 0
+
+Lưu ý: Phải clear flags trước khi bắt đầu transfer
+
+3. SMRmn - Serial Mode Register (Base + 0x10, 0x12, 0x14, 0x16)
+c
+typedef volatile struct {
+    uint8_t CKS   : 1;  // Bit 0: Clock Select (0=CKm0, 1=CKm1)
+    uint8_t CCS   : 1;  // Bit 1: Clock Control Select (0=Internal, 1=External)
+    uint8_t       : 6;  // Bit 2-7: Reserved
+    uint8_t STS   : 1;  // Bit 8: Start Trigger Select (0=Software, 1=External)
+    uint8_t SIS   : 1;  // Bit 9: Signal Invert Select (0=Normal, 1=Invert)
+    uint8_t       : 2;  // Bit 10-11: Reserved
+    uint8_t MD    : 3;  // Bit 12-14: Mode Select
+    uint8_t       : 1;  // Bit 15: Reserved
+} SMR_Bits_t;
+Chi tiết từng bit:
+
+CKS (Bit 0) - Clock Select
+text
+0: Use CKm0 clock (from SPSm[3:0])
+1: Use CKm1 clock (from SPSm[7:4])
+Cho I2C: Thường dùng CKS=0 (CKm0)
+
+CCS (Bit 1) - Clock Control Select
+text
+0: Use divided FMCK (internal clock)
+1: Use external clock input
+Cho I2C: LUÔN dùng CCS=0
+
+STS (Bit 8) - Start Trigger Select
+text
+0: Software trigger (ghi vào SSm)
+1: External trigger (pin input)
+Cho I2C: LUÔN dùng STS=0 (software control)
+
+SIS (Bit 9) - Signal Invert Select
+text
+0: Normal edge detection
+1: Invert input signal
+Cho I2C: Thường SIS=0
+
+MD[2:0] (Bit 12-14) - Mode Select
+c
+#define MD_SSPI     0x0000  // 000: SSPI mode
+#define MD_UART     0x2000  // 001: UART mode
+#define MD_I2C      0x4000  // 010: Simplified I2C mode
+#define MD_RESERVED 0x6000  // 011: Reserved
+// 100-111: Reserved
+Cho Simplified I2C: MD = 010b = 0x4000
+
+Ví dụ config cho I2C:
+
+c
+SMRmn = 0x0000;  // Reset value
+SMRmn |= (0 << 0);   // CKS=0 (CKm0)
+SMRmn |= (0 << 1);   // CCS=0 (internal clock)
+SMRmn |= (0 << 8);   // STS=0 (software trigger)
+SMRmn |= (0 << 9);   // SIS=0 (normal edge)
+SMRmn |= (0x4 << 12); // MD=010 (I2C mode)
+// Kết quả: 0x4024 (thực tế có thêm bit khác)
+4. SCRmn - Serial Communication Run Setting Register (Base + 0x18, 0x1A, 0x1C, 0x1E)
+ĐÂY LÀ REGISTER QUAN TRỌNG NHẤT CHO SIMPLIFIED I2C
+
+c
+typedef volatile struct {
+    // Byte 0 (LSB)
+    uint8_t DLS0  : 1;  // Bit 0: Data Length Select bit 0
+    uint8_t DLS1  : 1;  // Bit 1: Data Length Select bit 1
+    uint8_t DLS2  : 1;  // Bit 2: Data Length Select bit 2 (Fixed=1)
+    uint8_t DLS3  : 1;  // Bit 3: Data Length Select bit 3
+    uint8_t SLC0  : 1;  // Bit 4: Stop Length Control bit 0
+    uint8_t SLC1  : 1;  // Bit 5: Stop Length Control bit 1
+    uint8_t       : 1;  // Bit 6: Reserved (Fixed=0)
+    uint8_t DIR   : 1;  // Bit 7: Data Direction
+    
+    // Byte 1 (MSB)
+    uint8_t PTC0  : 1;  // Bit 8: Parity Control bit 0
+    uint8_t PTC1  : 1;  // Bit 9: Parity Control bit 1
+    uint8_t EOC   : 1;  // Bit 10: Error Interrupt Control
+    uint8_t       : 1;  // Bit 11: Reserved (Fixed=0)
+    uint8_t CKP   : 1;  // Bit 12: Clock Polarity (SSPI)
+    uint8_t DAP   : 1;  // Bit 13: Data Alignment (SSPI)
+    uint8_t RXE   : 1;  // Bit 14: Receive Enable
+    uint8_t TXE   : 1;  // Bit 15: Transmit Enable
+} SCR_Bits_t;
+Chi tiết từng bit cho I2C:
+A. DLS[3:0] (Bit 0-3) - Data Length Select
+
+text
+0000: 1-bit data  (Không dùng cho I2C)
+0001: 2-bit data  (Không dùng)
+0010: 3-bit data  (Không dùng)
+0011: 4-bit data  (Không dùng)
+0100: 5-bit data  (Không dùng)
+0101: 6-bit data  (Không dùng)
+0110: 7-bit data  (Không dùng)
+0111: 8-bit data  <- CHO I2C (8 bits = 1 byte)
+1000: 9-bit data  (UART)
+1001: 10-bit data (UART)
+...
+1111: 16-bit data (SSPI)
+Cho I2C: DLS[3:0] = 0111b
+
+B. SLC[1:0] (Bit 4-5) - Stop Length Control
+
+text
+00: 0.5 stop bits (UART)
+01: 1 stop bit    <- CHO I2C (1 STOP condition)
+10: 1.5 stop bits (UART)
+11: 2 stop bits   (UART)
+Cho I2C: SLC[1:0] = 01b
+
+C. Bit 6 - Reserved
+
+Fixed value: LUÔN phải là 0
+
+D. DIR (Bit 7) - Data Direction
+
+text
+0: MSB first      <- CHO I2C (MSB truyền trước)
+1: LSB first
+Cho I2C: DIR = 0
+
+E. PTC[1:0] (Bit 8-9) - Parity Control
+
+text
+00: No parity     <- CHO I2C (I2C không có parity)
+01: Odd parity
+10: Even parity
+11: Reserved
+F. EOC (Bit 10) - Error Interrupt Control
+
+text
+0: Error interrupt enabled
+1: Error interrupt disabled
+Cho I2C: Thường dùng EOC = 0 (enable error IRQ)
+
+G. Bit 11 - Reserved
+
+Fixed value: LUÔN phải là 0
+
+H. CKP (Bit 12) - Clock Polarity
+
+Chỉ dùng cho SSPI, không dùng cho I2C
+
+Cho I2C: CKP = 0
+
+I. DAP (Bit 13) - Data Alignment
+
+Chỉ dùng cho SSPI, không dùng cho I2C
+
+Cho I2C: DAP = 0
+
+J. RXE (Bit 14) - Receive Enable
+
+text
+0: Reception disabled
+1: Reception enabled
+Cho I2C: RXE = 1
+
+K. TXE (Bit 15) - Transmit Enable
+
+text
+0: Transmission disabled
+1: Transmission enabled
+Cho I2C: TXE = 1
+
+CONFIG CHUẨN CHO SIMPLIFIED I2C:
+c
+// Build từng bit cho rõ ràng
+uint16_t scr_value = 0;
+
+// Byte 0 (LSB)
+scr_value |= (1 << 0);   // DLS0 = 1
+scr_value |= (1 << 1);   // DLS1 = 1
+scr_value |= (1 << 2);   // DLS2 = 1 (Fixed=1)
+scr_value |= (0 << 3);   // DLS3 = 0
+// => DLS[3:0] = 0111 (8-bit data)
+
+scr_value |= (1 << 4);   // SLC0 = 1
+scr_value |= (0 << 5);   // SLC1 = 0
+// => SLC[1:0] = 01 (1 stop bit)
+
+scr_value |= (0 << 6);   // Bit6 = 0 (Fixed)
+
+scr_value |= (0 << 7);   // DIR = 0 (MSB first)
+
+// Byte 1 (MSB)
+scr_value |= (0 << 8);   // PTC0 = 0
+scr_value |= (0 << 9);   // PTC1 = 0
+// => PTC[1:0] = 00 (No parity)
+
+scr_value |= (0 << 10);  // EOC = 0 (Error IRQ enabled)
+
+scr_value |= (0 << 11);  // Bit11 = 0 (Fixed)
+
+scr_value |= (0 << 12);  // CKP = 0
+
+scr_value |= (0 << 13);  // DAP = 0
+
+scr_value |= (1 << 14);  // RXE = 1 (Receive enabled)
+
+scr_value |= (1 << 15);  // TXE = 1 (Transmit enabled)
+
+// Kết quả: 0xC087
+SCRmn = 0xC087;
+5. SDRmn - Serial Data Register (Base + 0x210, 0x212, 0x214, 0x216)
+Có 2 chức năng:
+
+Data register: Chứa data để truyền/nhận
+
+Baud rate divider: Bits 15:9 set divider cho I2C clock
+
+c
+// Khi SEmn = 0 (channel disabled):
+// Bits 15:9 = Divider value for I2C clock
+
+// Khi SEmn = 1 (channel enabled):
+// Bits 7:0 = Data to transmit/receive
+Công thức tính baud rate:
+
+text
+FTCLK = FMCK / [2 × (SDRmn[15:9] + 1)]
+Trong đó: FMCK = FCLK / (prescaler từ SPSm)
+
+Ví dụ: FCLK=32MHz, SPSm=0x44 (div16), cần 100kHz I2C:
+
+text
+FMCK = 32MHz / 16 = 2MHz
+Divider = (2MHz / (2 × 100kHz)) - 1 = 9
+SDRmn[15:9] = 9 << 9 = 0x1200
+6. SPSm - Serial Clock Selection Register
+Vị trí:
+
+SCI0: Base + 0x26
+
+SCI1: Base + 0x16
+
+SCI2: Base + 0x16
+
+c
+typedef volatile struct {
+    uint8_t PRS00 : 4;  // Bit 0-3: Prescaler for CK00/CK10/CK20
+    uint8_t PRS10 : 4;  // Bit 4-7: Prescaler for CK01/CK11/CK21
+    uint8_t       : 8;  // Bit 8-15: Reserved
+} SPS_Bits_t;
+Prescaler values:
+
+text
+0000: FCLK / 1
+0001: FCLK / 2
+0010: FCLK / 4
+0011: FCLK / 8
+0100: FCLK / 16   <- Thường dùng
+0101: FCLK / 32
+0110: FCLK / 64
+0111: FCLK / 128
+1000: FCLK / 256
+...
+1111: FCLK / 32768
+Ví dụ cho I2C:
+
+c
+// FCLK=32MHz, dùng FCLK/16 = 2MHz
+SPSm = 0x44;  // PRS10=4, PRS00=4 (cả 2 đều div16)
+7. SOm - Serial Output Register
+Vị trí:
+
+SCI0: Base + 0x28
+
+SCI1: Base + 0x18
+
+SCI2: Base + 0x18
+
+Format:
+
+SCI0 (4 channels):
+
+text
+Bit 0: SO00 (SDA cho channel 0)
+Bit 1: SO01 (SDA cho channel 1)
+Bit 2: SO02 (SDA cho channel 2)
+Bit 3: SO03 (SDA cho channel 3)
+Bit 4: CKO00 (SCL cho channel 0)
+Bit 5: CKO01 (SCL cho channel 1)
+Bit 6: CKO02 (SCL cho channel 2)
+Bit 7: CKO03 (SCL cho channel 3)
+SCI1/SCI2 (2 channels):
+
+text
+Bit 2: SO10/SO20 (SDA cho channel 0)
+Bit 3: SO11/SO21 (SDA cho channel 1)
+Bit 6: CKO10/CKO20 (SCL cho channel 0)
+Bit 7: CKO11/CKO21 (SCL cho channel 1)
+Công dụng: Set mức logic cho SCL/SDA khi manual control.
+
+8. SOEm - Serial Output Enable Register
+Vị trí:
+
+SCI0: Base + 0x2A
+
+SCI1: Base + 0x1A
+
+SCI2: Base + 0x1A
+
+Bit mapping giống SOm, nhưng:
+
+0: Output disabled (high-impedance)
+
+1: Output enabled
+
+Cho I2C:
+
+c
+// Enable output cho channel 0
+SOE0 |= (1 << 0) | (1 << 4);  // Enable SDA00 và SCL00
+9. SSm/STm - Start/Stop Registers
+SSm (Serial Start Register):
+
+Ghi 1 vào bit channel tương ứng để START channel
+
+STm (Serial Stop Register):
+
+Ghi 1 vào bit channel tương ứng để STOP channel
+
+Vị trí:
+
+text
+SCI0: SS0 = Base + 0x22, ST0 = Base + 0x24
+SCI1: SS1 = Base + 0x12, ST1 = Base + 0x14
+SCI2: SS1 = Base + 0x12, ST1 = Base + 0x14
+Sử dụng:
+
+c
+// Start channel 0
+SS0 |= (1 << 0);
+
+// Stop channel 0
+ST0 |= (1 << 0);
+10. PER0/PER2 - Peripheral Enable Registers
+PER0 (0x40020420):
+
+c
+Bit 0: SCI0 enable
+Bit 1: Reserved
+Bit 2: SCI1 enable
+Bit 3: Reserved
+Bit 4: IICA0 enable  <- Full I2C
+Bit 5: IICA1 enable  <- Full I2C
+PER2 (0x40020422):
+
+c
+Bit 0: Reserved
+Bit 1: Reserved
+Bit 2: SCI1 enable
+Bit 3: SCI2 enable
+Bit 4: Reserved
+Enable peripheral:
+
+c
+// Enable SCI0 (Simplified I2C)
+PER0 |= (1 << 0);
+
+// Enable IICA0 (Full I2C)
+PER0 |= (1 << 4);
+II. FULL I2C (IICA) - CHAPTER 20
+1. IICCTLn0 - Control Register n0 (Base + 0x00)
+c
+typedef volatile struct {
+    uint8_t INTEN : 1;  // Bit 0: Interrupt Request Enable
+    uint8_t ACKE  : 1;  // Bit 1: ACK Transmission Enable
+    uint8_t WTIE  : 1;  // Bit 2: Wait Detection Interrupt Enable
+    uint8_t SPIE  : 1;  // Bit 3: Stop Condition Interrupt Enable
+    uint8_t WREL  : 1;  // Bit 4: Wait Control
+    uint8_t SREL  : 1;  // Bit 5: SDA Output Control
+    uint8_t IICM  : 1;  // Bit 6: I2C Mode Select
+    uint8_t IICE  : 1;  // Bit 7: Operation Enable
+} IICCTL0_Bits_t;
+Chi tiết từng bit:
+
+INTEN (Bit 0) - Interrupt Enable
+text
+0: Disable all interrupts
+1: Enable interrupts (tùy thuộc WTIE, SPIE)
+Master: Thường INTEN = 1
+
+Slave: LUÔN INTEN = 1
+
+ACKE (Bit 1) - ACK Transmission Enable
+text
+0: NACK transmission (send NACK)
+1: ACK transmission (send ACK)
+Master receive: ACKE = 1 cho tất cả bytes trừ byte cuối
+
+Master transmit: Không quan trọng (slave sẽ ACK)
+
+Slave: ACKE = 1 để ACK address match
+
+WTIE (Bit 2) - Wait Detection Interrupt Enable
+text
+0: Disable wait detection interrupt
+1: Enable wait detection interrupt
+Dùng cho clock stretching
+
+SPIE (Bit 3) - Stop Condition Interrupt Enable
+text
+0: Disable stop condition interrupt
+1: Enable stop condition interrupt
+Slave: Nên SPIE = 1 để biết khi transfer kết thúc
+
+Master: Thường SPIE = 0
+
+WREL (Bit 4) - Wait Control
+text
+0: Wait mode disabled
+1: Wait mode enabled (clock stretching)
+Cho slave khi cần thời gian xử lý
+
+SREL (Bit 5) - SDA Output Control
+text
+0: SDA output disabled (input mode)
+1: SDA output enabled
+Control SDA pin direction
+
+IICM (Bit 6) - I2C Mode Select
+text
+0: Normal I2C mode
+1: I2C mode with extension (10-bit addressing)
+Set IICM = 1 nếu dùng 10-bit addressing
+
+IICE (Bit 7) - Operation Enable
+text
+0: Disable IICA (reset state)
+1: Enable IICA operation
+Lưu ý: Phải disable (IICE=0) trước khi config registers
+
+Ví dụ config:
+
+c
+// Master mode
+IICCTLn0 = 0;
+IICCTLn0 |= (1 << 7);  // IICE = 1 (enable)
+IICCTLn0 |= (1 << 6);  // IICM = 0/1 (tùy addressing)
+IICCTLn0 |= (1 << 0);  // INTEN = 1 (enable interrupt)
+
+// Slave mode
+IICCTLn0 = 0;
+IICCTLn0 |= (1 << 7);  // IICE = 1
+IICCTLn0 |= (1 << 5);  // SREL = 1 (SDA output)
+IICCTLn0 |= (1 << 4);  // WREL = 1 (wait control)
+IICCTLn0 |= (1 << 3);  // SPIE = 1 (stop interrupt)
+IICCTLn0 |= (1 << 1);  // ACKE = 1 (ACK enable)
+IICCTLn0 |= (1 << 0);  // INTEN = 1
+2. IICCTLn1 - Control Register n1 (Base + 0x04)
+c
+typedef volatile struct {
+    uint8_t ACKB  : 1;  // Bit 0: ACK Transmission Buffer
+    uint8_t ACK   : 1;  // Bit 1: ACK Transmission
+    uint8_t SPC   : 1;  // Bit 2: Stop Condition
+    uint8_t STC   : 1;  // Bit 3: Start Condition
+    uint8_t TRS   : 1;  // Bit 4: Transmission/Reception Selection
+    uint8_t ACKD  : 1;  // Bit 5: ACK Detection
+    uint8_t SPCEN : 1;  // Bit 6: Stop Condition Generation Enable
+    uint8_t STCEN : 1;  // Bit 7: Start Condition Generation Enable
+} IICCTL1_Bits_t;
+ACKB (Bit 0) - ACK Transmission Buffer
+Buffer cho bit ACK
+
+Read-only, được update khi nhận data
+
+ACK (Bit 1) - ACK Transmission
+text
+0: Send NACK
+1: Send ACK
+Master receive: Set trước khi nhận byte
+
+SPC (Bit 2) - Stop Condition
+text
+0: No stop condition
+1: Generate stop condition
+Tự động clear sau khi stop condition hoàn thành
+
+STC (Bit 3) - Start Condition
+text
+0: No start condition
+1: Generate start condition
+Tự động clear sau khi start condition hoàn thành
+
+TRS (Bit 4) - Transmission/Reception Selection
+text
+0: Reception mode
+1: Transmission mode
+Set trước khi bắt đầu transfer
+
+ACKD (Bit 5) - ACK Detection
+text
+0: ACK received
+1: NACK received
+Read-only flag
+
+SPCEN (Bit 6) - Stop Condition Generation Enable
+text
+0: Disable auto stop generation
+1: Enable auto stop generation
+Master: Thường SPCEN = 1
+
+STCEN (Bit 7) - Start Condition Generation Enable
+text
+0: Disable start condition
+1: Enable start condition
+Master: Thường STCEN = 1
+
+3. IICSn - Status Register n (Base + 0x08)
+c
+typedef volatile struct {
+    uint8_t SPC   : 1;  // Bit 0: Stop Condition Generation Completion
+    uint8_t STC   : 1;  // Bit 1: Start Condition Generation Completion
+    uint8_t AD0   : 1;  // Bit 2: Address 0 Match (for slave)
+    uint8_t AAS   : 1;  // Bit 3: Slave Address Match
+    uint8_t AL    : 1;  // Bit 4: Arbitration Lost
+    uint8_t BBSY  : 1;  // Bit 5: Bus Busy
+    uint8_t TRC   : 1;  // Bit 6: Transmission/Reception Completion
+    uint8_t STD   : 1;  // Bit 7: Start Condition Detection
+} IICS_Bits_t;
+Chi tiết:
+
+SPC (Bit 0): 1 = Stop condition đã được generate
+
+STC (Bit 1): 1 = Start condition đã được generate
+
+AD0 (Bit 2): 1 = Address match với address 0 (slave)
+
+AAS (Bit 3): 1 = Address match (slave được select)
+
+AL (Bit 4): 1 = Arbitration lost (multi-master)
+
+BBSY (Bit 5): 1 = Bus đang busy
+
+TRC (Bit 6): 1 = Transfer complete
+
+STD (Bit 7): 1 = Start condition detected (slave mode)
+
+4. IICFn - Flag Register n (Base + 0x0C)
+c
+typedef volatile struct {
+    uint8_t SPCF  : 1;  // Bit 0: Stop Condition Generation Flag
+    uint8_t STCFG : 1;  // Bit 1: Start Condition Generation Flag
+    uint8_t AD0F  : 1;  // Bit 2: Address 0 Match Flag
+    uint8_t AASF  : 1;  // Bit 3: Slave Address Match Flag
+    uint8_t ALF   : 1;  // Bit 4: Arbitration Lost Flag
+    uint8_t BBSYF : 1;  // Bit 5: Bus Busy Flag
+    uint8_t TRCF  : 1;  // Bit 6: Transmission/Reception Completion Flag
+    uint8_t STCF  : 1;  // Bit 7: Start Condition Detection Flag
+} IICF_Bits_t;
+Cách clear flags: Đọc register (read tự động clear)
+
+5. IICWLn/IICWHn - Width Setting Registers
+IICWLn (Base + 0x10): SCL LOW width setting
+IICWHn (Base + 0x14): SCL HIGH width setting
+
+Công thức tính tần số:
+
+text
+SCL Frequency = FCLK / (IICWH + IICWL + 6)
+Ví dụ: FCLK=32MHz, cần 100kHz:
+
+text
+Total cycles = 32MHz / 100kHz = 320 cycles
+IICWH + IICWL = 320 - 6 = 314
+Chia đều: IICWH = 157, IICWL = 157
+6. IICAn - Shift Register n (Base + 0x18)
+Data register để gửi/nhận data
+
+Ghi data để truyền, đọc để nhận data
+
+7. SVAn - Slave Address Register (Base + 0x1C)
+Format:
+
+text
+Bit 0: Reserved (0)
+Bit 1-7: 7-bit slave address
+Bit 0-6: 7-bit slave address (nếu xem là 8-bit)
+Lưu ý: 7-bit address cần shift left 1 bit:
+
+c
+// Slave address 0x50 (7-bit)
+SVAn = 0x50 << 1;  // = 0xA0
+III. GPIO REGISTERS
+1. POMxx - Port Output Mode Register
+Vị trí:
+
+POM0: 0x40000040
+
+POM1: 0x40000041
+
+...
+
+POM5: 0x40000045
+
+Bit meaning:
+
+text
+0: CMOS output (push-pull)
+1: N-channel open-drain output  <- CHO I2C
+Config cho I2C:
+
+c
+POMx |= (1 << pin);  // Set open-drain
+2. PMxx - Port Mode Register
+Vị trí:
+
+PM0: 0x40000320
+
+PM1: 0x40000321
+
+...
+
+PM5: 0x40000325
+
+Bit meaning:
+
+text
+0: Output mode
+1: Input mode     <- CHO I2C khi idle
+Lưu ý: I2C pins nên ở input mode khi idle.
+
+3. PUxx - Pull-up Resistor Register
+Vị trí:
+
+PU0: 0x40000030
+
+PU1: 0x40000031
+
+...
+
+PU5: 0x40000035
+
+Bit meaning:
+
+text
+0: Pull-up disabled
+1: Pull-up enabled   <- CHO I2C (nếu không có external pull-up)
+4. PMCxx - Port Mode Control Register
+Vị trí:
+
+PMC0: 0x40000060
+
+...
+
+PMC5: 0x40000065
+
+Bit meaning:
+
+text
+0: Digital I/O mode    <- CHO I2C
+1: Analog mode
+IV. CONFIG FLOW CHART
+A. SIMPLIFIED I2C CONFIG FLOW:
+text
+1. Disable channel: STm |= (1 << channel)
+2. Clear flags: SIRmn = 0x0007
+3. Configure GPIO: POMx, PMx, PUx, PMCx
+4. Enable peripheral clock: PER0/PER2
+5. Configure SPSm (clock prescaler)
+6. Configure SMRmn (I2C mode)
+7. Configure SDRmn[15:9] (baud rate divider)
+8. Configure SCRmn (QUAN TRỌNG: 0xC087)
+9. Configure SOEm (enable outputs)
+10. Clear flags again
+11. Start channel: SSm |= (1 << channel)
+B. FULL I2C CONFIG FLOW:
+text
+1. Disable IICA: IICCTLn0.IICE = 0
+2. Configure GPIO: POMx, PMx, PUx
+3. Enable peripheral clock: PER0
+4. Configure IICWLn/IICWHn (timing)
+5. Configure IICCTLn0 (mode, interrupts)
+6. Configure IICCTLn1 (start/stop control)
+7. For slave: Configure SVAn (address)
+8. Clear flags: Đọc IICFn
+9. Enable IICA: IICCTLn0.IICE = 1
+10. Wait for bus free: while(IICSn.BBSY)
+
+
+
+
+1. START condition
+2. Send 7-bit slave address + R/W bit
+3. Wait for ACK
+4. Send/receive data byte
+5. Wait for ACK/NACK
+6. Repeat 4-5 cho đến hết data
+7. STOP condition
