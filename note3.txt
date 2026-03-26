@@ -1,0 +1,638 @@
+WEB TOOL TỰ ĐỘNG HÓA - JIRA, GIT, SHAREPOINT, CONFLUENCE
+________________________________________
+Phiên bản: 1.0
+Ngày: 26 Tháng 03, 2026
+Dự án: Web Tool Automation Platform
+________________________________________
+MỤC LỤC
+Phần	Nội dung	Trang
+1	Tổng quan dự án	2
+2	Architecture Design (Thiết kế kiến trúc)	6
+3	System Design (Thiết kế hệ thống)	10
+4	Database Design (Thiết kế cơ sở dữ liệu)	8
+5	Transaction & Callback (Xử lý lỗi - Rollback)	5
+6	API Design (Thiết kế API)	4
+7	Công nghệ sử dụng	3
+8	Kế hoạch triển khai	3
+9	Kết luận	1
+Tổng		≈ 42 trang
+________________________________________
+PHẦN 1: TỔNG QUAN DỰ ÁN
+1.1. Mục tiêu dự án
+Xây dựng một Web Tool cho phép tự động hóa việc tạo và đồng bộ dữ liệu giữa 4 hệ thống doanh nghiệp:
+STT	Hệ thống	Chức năng tự động hóa
+1	Jira	Tạo Task/Issue, cập nhật thông tin, đồng bộ task về dashboard
+2	Git (GitHub/GitLab)	Tạo branch mới từ main/master, tạo commit đầu tiên
+3	SharePoint	Tạo folder theo cấu trúc, copy template vào folder
+4	Confluence	Tạo page mới từ template, cập nhật nội dung
+1.2. Yêu cầu chức năng
+STT	Yêu cầu	Mô tả chi tiết
+1	Dashboard	Hiển thị tất cả task từ Jira với đầy đủ: tên task, người tạo, ngày bắt đầu, ngày kết thúc, mức độ ưu tiên
+2	CRUD Task	Tạo mới, chỉnh sửa, xóa task (process execution)
+3	Tự động hóa 4 hệ thống	Một click gửi API đến Jira, Git, SharePoint, Confluence đồng thời
+4	Theo dõi lịch sử	Xem chi tiết từng lần thực thi, log lỗi, thời gian xử lý
+5	Đồng bộ Jira	Tự động đồng bộ task từ Jira về hệ thống, hiển thị real-time
+1.3. Yêu cầu phi chức năng
+STT	Yêu cầu	Mô tả
+1	Hiệu năng	Thời gian xử lý mỗi task không quá 30 giây
+2	Độ sẵn sàng	Hệ thống hoạt động 99.9% thời gian
+3	Bảo mật	Mã hóa token, phân quyền người dùng (RBAC)
+4	Nhất quán dữ liệu	Đảm bảo All-or-Nothing: thành công cả 4 hệ thống hoặc không hệ thống nào
+5	Khả năng mở rộng	Dễ dàng thêm integration mới (Slack, Teams, etc.)
+________________________________________
+PHẦN 2: ARCHITECTURE DESIGN (Thiết kế kiến trúc)
+2.1. Mô hình 4 tầng (4-Layer Architecture)
+Hệ thống được xây dựng theo mô hình 4 tầng phân tách rõ ràng:
+text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           TẦNG 1: PRESENTATION                              │
+│                           (Tầng giao diện)                                  │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  • React.js - Giao diện web                                           │  │
+│  │  • Dashboard hiển thị task Jira                                       │  │
+│  │  • Form tạo/sửa/xóa task                                              │  │
+│  │  • WebSocket nhận cập nhật real-time                                  │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                          │
+                                          ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           TẦNG 2: APPLICATION                               │
+│                           (Tầng xử lý nghiệp vụ)                            │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  • FastAPI - Xử lý logic business                                     │  │
+│  │  • Xác thực người dùng (JWT)                                          │  │
+│  │  • Điều phối integration calls                                        │  │
+│  │  • Transaction Manager (xử lý rollback)                               │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                          │
+                                          ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           TẦNG 3: DATA                                      │
+│                           (Tầng dữ liệu)                                    │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  • PostgreSQL - Dữ liệu chính                                         │  │
+│  │  • Redis - Cache và session                                           │  │
+│  │  • 8 bảng dữ liệu: tasks, jira_details, git_details...               │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                          │
+                                          ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           TẦNG 4: INTEGRATION                               │
+│                           (Tầng kết nối)                                    │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │  • Jira Adapter - Gọi Jira API                                        │  │
+│  │  • Git Adapter - Gọi GitHub/GitLab API                                │  │
+│  │  • SharePoint Adapter - Gọi Microsoft Graph API                       │  │
+│  │  • Confluence Adapter - Gọi Confluence REST API                       │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+Giải thích cho khách hàng:
+Tầng	Ví dụ thực tế	Vai trò
+Tầng 1	Quầy lễ tân khách sạn	Nơi khách hàng nhìn thấy và thao tác
+Tầng 2	Phòng xử lý hồ sơ	Xử lý logic, kiểm tra, điều phối
+Tầng 3	Kho lưu trữ	Lưu trữ tất cả thông tin
+Tầng 4	Bộ phận đối ngoại	Giao tiếp với các hệ thống bên ngoài
+2.2. Kiến trúc Microservices
+Hệ thống được chia thành các dịch vụ nhỏ, độc lập:
+text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         API GATEWAY (FastAPI)                               │
+│                    Nhận request, phân phối đến các service                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+          │              │              │              │              │
+          ▼              ▼              ▼              ▼              ▼
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│   Task      │ │Integration  │ │   Jira      │ │    Git      │ │  SharePoint │
+│  Service    │ │  Service    │ │  Service    │ │  Service    │ │   Service   │
+└─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│ Confluence  │ │    Sync     │ │Notification │
+│  Service    │ │  Service    │ │  Service    │
+└─────────────┘ └─────────────┘ └─────────────┘
+Chức năng từng Service:
+Service	Chức năng	Tương tự trong thực tế
+Task Service	Tạo/sửa/xóa task, quản lý trạng thái	Bộ phận quản lý dự án
+Integration Service	Điều phối gọi 4 hệ thống, quản lý transaction	Bộ phận điều phối công việc
+Jira Service	Giao tiếp với Jira API	Chuyên viên liên hệ với Jira
+Git Service	Giao tiếp với Git API	Chuyên viên liên hệ với Git
+SharePoint Service	Giao tiếp với SharePoint API	Chuyên viên liên hệ với SharePoint
+Confluence Service	Giao tiếp với Confluence API	Chuyên viên liên hệ với Confluence
+Sync Service	Đồng bộ task từ Jira về hệ thống	Bộ phận cập nhật dữ liệu
+Notification Service	Gửi thông báo qua email/web	Bộ phận chăm sóc khách hàng
+Lợi ích của Microservices:
+•	✅ Cách ly lỗi: Jira bị lỗi chỉ ảnh hưởng Jira Service, các service khác vẫn hoạt động
+•	✅ Mở rộng linh hoạt: Giờ cao điểm chỉ tăng instance cho service đang quá tải
+•	✅ Bảo trì dễ dàng: Sửa một service không cần restart toàn hệ thống
+2.3. Xử lý bất đồng bộ (Async Processing)
+Vấn đề: Xử lý đồng bộ bắt người dùng chờ đợi 12-15 giây.
+Giải pháp: Sử dụng hàng đợi (Celery + Redis) để xử lý ngầm.
+text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              NGƯỜI DÙNG                                    │
+│                                   │                                        │
+│                                   ▼                                        │
+│                         Click "Execute"                                    │
+│                                   │                                        │
+│                                   ▼                                        │
+│                    ┌──────────────────────────────────┐                    │
+│                    │  "Đã nhận yêu cầu"               │                    │
+│                    │  ID: TASK-001                    │ ← Trả về ngay       │
+│                    │  Sẽ thông báo khi xong"          │   (0.1 giây)        │
+│                    └──────────────────────────────────┘                    │
+│                                   │                                        │
+│                    (Người dùng tiếp tục làm việc khác)                     │
+│                                   │                                        │
+│                                   ▼                                        │
+│                    ┌──────────────────────────────────┐                    │
+│                    │      HÀNG ĐỢI (Redis/Celery)     │                    │
+│                    │  ┌────────────────────────────┐  │                    │
+│                    │  │ TASK-001                   │  │ ← Xử lý ngầm       │
+│                    │  │ TASK-002                   │  │                    │
+│                    │  │ TASK-003                   │  │                    │
+│                    │  └────────────────────────────┘  │                    │
+│                    └──────────────────────────────────┘                    │
+│                                   │                                        │
+│                                   ▼                                        │
+│                    ┌──────────────────────────────────┐                    │
+│                    │     XỬ LÝ NGẦM (Worker)          │                    │
+│                    │  Jira → Git → SPO → Conf         │                    │
+│                    │  + Transaction & Rollback        │                    │
+│                    └──────────────────────────────────┘                    │
+│                                   │                                        │
+│                                   ▼                                        │
+│                    ┌──────────────────────────────────┐                    │
+│                    │     THÔNG BÁO (WebSocket)        │                    │
+│                    │  "Task TASK-001 đã hoàn thành"   │                    │
+│                    └──────────────────────────────────┘                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+Cơ chế Retry (Tự động thử lại):
+Lần thử	Thời gian chờ	Kết quả
+Lần 1	0 giây	Gọi API → Timeout
+Lần 2	60 giây	Gọi API → Timeout
+Lần 3	120 giây	Gọi API → Thành công
+2.4. Cập nhật thời gian thực (Real-time Updates)
+Vấn đề: HTTP Polling (hỏi liên tục) tốn tài nguyên, độ trễ cao.
+Giải pháp: WebSocket - kết nối hai chiều, đẩy dữ liệu ngay khi có cập nhật.
+Phương thức	Cách hoạt động	Độ trễ	Tài nguyên
+HTTP Polling	Mỗi 5 giây hỏi "có tin mới không?"	5 giây	Cao
+WebSocket	Mở kết nối, server đẩy tin ngay	< 1 giây	Thấp
+2.5. Đóng gói và triển khai (Docker Container)
+Vấn đề: Môi trường dev/test/production khác nhau gây lỗi.
+Giải pháp: Đóng gói mỗi thành phần vào container riêng.
+text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         DOCKER CONTAINERS                                   │
+│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐               │
+│  │   Container 1   │ │   Container 2   │ │   Container 3   │               │
+│  │   React App     │ │   FastAPI       │ │   PostgreSQL    │               │
+│  │   (Frontend)    │ │   (Backend)     │ │   (Database)    │               │
+│  │   Port: 3000    │ │   Port: 8000    │ │   Port: 5432    │               │
+│  └─────────────────┘ └─────────────────┘ └─────────────────┘               │
+│                                                                             │
+│  ┌─────────────────┐ ┌─────────────────┐                                   │
+│  │   Container 4   │ │   Container 5   │                                   │
+│  │     Redis       │ │   Celery        │                                   │
+│  │   (Cache)       │ │   (Worker)      │                                   │
+│  │   Port: 6379    │ │   (Async)       │                                   │
+│  └─────────────────┘ └─────────────────┘                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+________________________________________
+PHẦN 3: SYSTEM DESIGN (Thiết kế hệ thống)
+3.1. Tổng quan kiến trúc dữ liệu
+text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         BẢNG TRUNG TÂM: TASKS                               │
+│  ┌───────────────────────────────────────────────────────────────────────┐ │
+│  │ • id (PK) - Mã task trong hệ thống                                    │ │
+│  │ • task_key - Mã dễ nhìn: TASK-001                                     │ │
+│  │ • name - Tên task                                                     │ │
+│  │ • status - DRAFT / ACTIVE / COMPLETED / FAILED                        │ │
+│  │ • priority - LOW / MEDIUM / HIGH / CRITICAL                           │ │
+│  │                                                                        │ │
+│  │ ⭐⭐⭐ 4 ID LIÊN KẾT QUAN TRỌNG ⭐⭐⭐                                   │ │
+│  │ • jira_id (FK) ──────────────────────────┐                            │ │
+│  │ • git_id (FK) ───────────────────────────┼── Liên kết đến             │ │
+│  │ • sharepoint_id (FK) ────────────────────┼── 4 bảng chi tiết          │ │
+│  │ • confluence_id (FK) ────────────────────┘                            │ │
+│  └───────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
+       │                    │                    │                    │
+       ▼                    ▼                    ▼                    ▼
+┌───────────────┐  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐
+│ JIRA_DETAILS  │  │ GIT_DETAILS   │  │SHAREPOINT_    │  │CONFLUENCE_    │
+│               │  │               │  │  DETAILS      │  │  DETAILS      │
+├───────────────┤  ├───────────────┤  ├───────────────┤  ├───────────────┤
+│ ticket_key    │  │ branch_name   │  │ folder_name   │  │ page_id       │
+│ task_name     │  │ branch_url    │  │ folder_url    │  │ page_title    │
+│ created_by    │  │ repo_url      │  │ site_url      │  │ page_url      │
+│ assignee      │  │ commit_sha    │  │ template_name │  │ space_key     │
+│ start_date    │  │ provider      │  │ copied_file   │  │ content       │
+│ due_date      │  │               │  │               │  │               │
+│ priority      │  │               │  │               │  │               │
+└───────────────┘  └───────────────┘  └───────────────┘  └───────────────┘
+3.2. Bảng JIRA_DETAILS - Đầy đủ thông tin Jira
+Tên cột	Kiểu dữ liệu	Mô tả	Ví dụ
+id	UUID	Mã định danh	123e4567-e89b-12d3-a456-426614174000
+jira_ticket_key	VARCHAR(50)	Mã ticket Jira	PROJ-123
+jira_ticket_url	VARCHAR(500)	Link đến Jira	https://jira.com/browse/PROJ-123
+
+task_name	VARCHAR(500)	Tên task trên Jira	Implement Automation Feature
+task_description	TEXT	Mô tả chi tiết	Create web tool for...
+created_by	VARCHAR(255)	Người tạo task	Nguyễn Văn A
+assignee_name	VARCHAR(255)	Người được giao	Trần Thị B
+start_date	DATE	Ngày bắt đầu	2024-01-15
+due_date	DATE	Ngày kết thúc (End Date)	2024-01-30
+priority	VARCHAR(50)	Mức độ ưu tiên	High / Medium / Low
+status	VARCHAR(50)	Trạng thái Jira	To Do / In Progress / Done
+issue_type	VARCHAR(50)	Loại issue	Task / Bug / Story
+project_key	VARCHAR(50)	Mã dự án	PROJ
+labels	JSONB	Nhãn phân loại	["frontend", "urgent"]
+3.3. Bảng EXECUTION_LOGS - Lịch sử thực thi
+Tên cột	Kiểu dữ liệu	Mô tả
+id	UUID	Mã định danh
+task_id	UUID (FK)	Task được thực thi
+execution_number	INTEGER	Lần thực thi thứ mấy
+triggered_by	UUID (FK)	Ai đã kích hoạt
+status	VARCHAR(20)	SUCCESS / PARTIAL / FAILED
+jira_result	JSONB	Kết quả từ Jira
+git_result	JSONB	Kết quả từ Git
+sharepoint_result	JSONB	Kết quả từ SharePoint
+confluence_result	JSONB	Kết quả từ Confluence
+started_at	TIMESTAMP	Thời gian bắt đầu
+completed_at	TIMESTAMP	Thời gian kết thúc
+duration_ms	FLOAT	Thời gian xử lý (ms)
+3.4. Bảng STEP_LOGS - Log chi tiết từng API call
+Tên cột	Kiểu dữ liệu	Mô tả
+id	UUID	Mã định danh
+execution_id	UUID (FK)	Thuộc execution nào
+step_order	INTEGER	Bước thứ mấy (1,2,3,4)
+integration_type	VARCHAR(50)	JIRA / GIT / SHAREPOINT / CONFLUENCE
+endpoint	VARCHAR(500)	API endpoint đã gọi
+method	VARCHAR(10)	POST / GET / PUT / DELETE
+request_payload	JSONB	Dữ liệu gửi đi
+response_payload	JSONB	Dữ liệu nhận về
+status_code	INTEGER	HTTP status code
+status	VARCHAR(20)	SUCCESS / FAILED / RETRYING
+error_message	TEXT	Lỗi chi tiết
+duration_ms	FLOAT	Thời gian gọi API
+retry_count	INTEGER	Số lần đã thử lại
+________________________________________
+PHẦN 4: TRANSACTION & CALLBACK COMPENSATION
+(Xử lý lỗi - Rollback không lưu dữ liệu)
+4.1. Vấn đề cần giải quyết
+Khi người dùng click "Execute" để tạo task trên 4 hệ thống cùng lúc, có thể xảy ra tình huống:
+text
+VÍ DỤ VỀ SỰ CỐ:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Bước 1: Gọi Jira API     → ✅ Thành công (Đã tạo ticket PROJ-123)          │
+│ Bước 2: Gọi Git API      → ✅ Thành công (Đã tạo branch feature/PROJ-123)  │
+│ Bước 3: Gọi SharePoint   → ❌ THẤT BẠI (Lỗi mạng, không tạo được folder)   │
+│ Bước 4: Gọi Confluence   → ⏸ Chưa chạy                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+HẬU QUẢ:
+- Jira đã có ticket mới nhưng không có folder SharePoint tương ứng
+- Git đã có branch mới nhưng không có tài liệu trên Confluence
+- Dữ liệu không nhất quán giữa 4 hệ thống
+- Người dùng phải tự tay xóa ticket Jira, xóa branch Git
+Yêu cầu: Phải đảm bảo Tất cả hoặc Không gì cả (All or Nothing):
+•	Nếu thành công: Cả 4 hệ thống đều có dữ liệu + Database được lưu
+•	Nếu thất bại: Không hệ thống nào có dữ liệu mới + Database không lưu gì
+4.2. Giải pháp: Transaction với Compensation Callback
+Khái niệm:
+•	Transaction ở đây KHÔNG PHẢI là transaction trong SQL, mà là transaction ở tầng ứng dụng - một đơn vị công việc bao gồm nhiều API call đến các hệ thống khác nhau
+•	Compensation Callback là cơ chế "rollback" cho các API call: khi gọi API tạo dữ liệu (CREATE), ta đồng thời chuẩn bị sẵn một API hủy dữ liệu (DELETE)
+4.3. Sơ đồ Transaction Manager
+text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    TRANSACTION MANAGER (Python Backend)                     │
+│                                                                             │
+│  ┌───────────────────────────────────────────────────────────────────────┐ │
+│  │                    COMPENSATION STACK                                 │ │
+│  │  (Danh sách các callback đã chuẩn bị để rollback)                    │ │
+│  │  ┌─────────────────────────────────────────────────────────────────┐ │ │
+│  │  │ [1] Jira Compensation:  DELETE /issue/PROJ-123                 │ │ │
+│  │  │ [2] Git Compensation:   DELETE /branch/feature/PROJ-123        │ │ │
+│  │  │ [3] SharePoint Comp:    DELETE /folder/PROJ-123                │ │ │
+│  │  │ [4] Confluence Comp:    DELETE /page/123456                    │ │ │
+│  │  └─────────────────────────────────────────────────────────────────┘ │ │
+│  └───────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  CƠ CHẾ:                                                                   │
+│  - Mỗi khi gọi API thành công → Push callback vào stack                    │
+│  - Nếu bất kỳ bước thất bại → Pop stack và gọi callback theo thứ tự ngược │
+│  - Nếu thành công tất cả → Clear stack, commit database                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+4.4. Luồng xử lý thành công
+text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ BẮT ĐẦU TRANSACTION (Tạo task mới)                                          │
+│                                                                             │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ Bước 1: Gọi Jira API - Tạo ticket                                      │ │
+│ │   ✅ Thành công                                                         │ │
+│ │   → Push compensation: DELETE /issue/PROJ-123 vào stack                │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                    │                                        │
+│                                    ▼                                        │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ Bước 2: Gọi Git API - Tạo branch                                       │ │
+│ │   ✅ Thành công                                                         │ │
+│ │   → Push compensation: DELETE /branch/feature/PROJ-123 vào stack       │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                    │                                        │
+│                                    ▼                                        │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ Bước 3: Gọi SharePoint API - Tạo folder                                │ │
+│ │   ✅ Thành công                                                         │ │
+│ │   → Push compensation: DELETE /folder/PROJ-123 vào stack               │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                    │                                        │
+│                                    ▼                                        │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ Bước 4: Gọi Confluence API - Tạo page                                  │ │
+│ │   ✅ Thành công                                                         │ │
+│ │   → Push compensation: DELETE /page/page-789 vào stack                 │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                    │                                        │
+│                                    ▼                                        │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ COMMIT TRANSACTION                                                     │ │
+│ │                                                                         │ │
+│ │ 1. Lưu dữ liệu vào Database (INSERT vào 4 bảng)                        │ │
+│ │ 2. Xóa stack compensation (không cần rollback)                         │ │
+│ │ 3. Trả về kết quả thành công cho người dùng                            │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│ KẾT QUẢ:                                                                   │
+│ ✅ Jira có ticket PROJ-123                                                 │
+│ ✅ Git có branch feature/PROJ-123                                          │
+│ ✅ SharePoint có folder /PROJ-123                                          │
+│ ✅ Confluence có page PROJ-123 Documentation                               │
+│ ✅ Database có 4 bản ghi liên kết                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+4.5. Luồng xử lý thất bại - Có rollback
+text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ BẮT ĐẦU TRANSACTION (Tạo task mới)                                          │
+│                                                                             │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ Bước 1: Gọi Jira API - Tạo ticket                                      │ │
+│ │   ✅ Thành công → Push compensation: DELETE /issue/PROJ-123            │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                    │                                        │
+│                                    ▼                                        │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ Bước 2: Gọi Git API - Tạo branch                                       │ │
+│ │   ✅ Thành công → Push compensation: DELETE /branch/feature/PROJ-123   │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                    │                                        │
+│                                    ▼                                        │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ Bước 3: Gọi SharePoint API - Tạo folder                                │ │
+│ │   ❌ THẤT BẠI - Lỗi: "Connection timeout after 30 seconds"             │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                    │                                        │
+│                                    ▼                                        │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ ROLLBACK - Gọi tất cả compensation callback theo thứ tự NGƯỢC          │ │
+│ │                                                                         │ │
+│ │   Step 3 thất bại → Chưa tạo gì ở SharePoint, không cần rollback       │ │
+│ │                                                                         │ │
+│ │   Compensation 2 (Git):   DELETE /branch/feature/PROJ-123              │ │
+│ │   → Xóa branch vừa tạo, Git trở về trạng thái ban đầu                  │ │
+│ │                                                                         │ │
+│ │   Compensation 1 (Jira):  DELETE /issue/PROJ-123                       │ │
+│ │   → Xóa ticket vừa tạo, Jira trở về trạng thái ban đầu                 │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                    │                                        │
+│                                    ▼                                        │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ KHÔNG LƯU DATABASE                                                     │ │
+│ │                                                                         │ │
+│ │ 1. Không INSERT dữ liệu vào các bảng                                   │ │
+│ │ 2. Xóa stack compensation                                               │ │
+│ │ 3. Trả về lỗi cho người dùng: "Không thể tạo task, đã rollback"        │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│ KẾT QUẢ:                                                                   │
+│ ❌ Jira không có ticket mới                                                │
+│ ❌ Git không có branch mới                                                 │
+│ ❌ SharePoint không có folder mới                                          │
+│ ❌ Confluence không có page mới                                            │
+│ ❌ Database không có bản ghi nào                                          │
+│ → Hệ thống trở về trạng thái như trước khi thực thi                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+4.6. Code Python minh họa (Transaction Manager)
+python
+class TransactionManager:
+    """Quản lý transaction với compensation callback"""
+    
+    def __init__(self):
+        self.compensation_stack = []  # Stack lưu các callback
+        self.results = {}              # Lưu kết quả tạm thời
+    
+    def execute_with_transaction(self, steps):
+        """
+        Thực thi các bước trong transaction
+        steps: list of (action, compensation) tuples
+        """
+        try:
+            # Thực hiện từng bước
+            for i, (action, compensation) in enumerate(steps):
+                try:
+                    # Gọi action (ví dụ: tạo Jira ticket)
+                    result = action()
+                    self.results[f"step_{i}"] = result
+                    # Push compensation vào stack
+                    self.compensation_stack.append(compensation)
+                    
+                except Exception as e:
+                    # Có lỗi → rollback
+                    print(f"Step {i} failed: {e}")
+                    self._rollback()
+                    raise Exception(f"Transaction failed at step {i}: {e}")
+            
+            # Tất cả thành công → commit
+            self._commit()
+            return {"status": "success", "results": self.results}
+            
+        except Exception as e:
+            return {"status": "failed", "error": str(e)}
+    
+    def _rollback(self):
+        """Gọi tất cả compensation callback theo thứ tự ngược"""
+        print(f"Rolling back {len(self.compensation_stack)} operations...")
+        
+        while self.compensation_stack:
+            compensation = self.compensation_stack.pop()
+            try:
+                compensation()  # Gọi API xóa dữ liệu
+                print(f"Compensation successful")
+            except Exception as e:
+                print(f"Compensation failed: {e}")
+                # Log lỗi nhưng vẫn tiếp tục rollback các bước khác
+    
+    def _commit(self):
+        """Commit transaction - lưu vào database"""
+        print("Committing transaction...")
+        # Lưu dữ liệu vào database
+        # INSERT vào 4 bảng
+        print("Database committed")
+        # Xóa stack
+        self.compensation_stack.clear()
+4.7. Tóm tắt cơ chế
+Thành phần	Mô tả
+Transaction Manager	Quản lý toàn bộ quá trình, lưu stack compensation
+Action	Hàm gọi API tạo dữ liệu (CREATE)
+Compensation	Hàm gọi API xóa dữ liệu (DELETE)
+Stack	Lưu các compensation theo thứ tự thực hiện
+Rollback	Gọi compensation theo thứ tự ngược khi có lỗi
+Commit	Lưu database khi tất cả thành công
+________________________________________
+PHẦN 5: API DESIGN (Thiết kế API)
+5.1. Format Response chuẩn
+Thành công:
+json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Thông báo",
+  "timestamp": "2024-01-15T10:00:00Z"
+}
+Thất bại:
+json
+{
+  "success": false,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Thông báo lỗi",
+    "details": "Chi tiết lỗi"
+  },
+  "timestamp": "2024-01-15T10:00:00Z"
+}
+5.2. Danh sách API
+Method	Endpoint	Mô tả
+GET	/api/tasks	Lấy danh sách tasks
+GET	/api/tasks/{id}	Lấy chi tiết 1 task
+POST	/api/tasks	Tạo task mới
+PUT	/api/tasks/{id}	Cập nhật task
+DELETE	/api/tasks/{id}	Xóa task
+POST	/api/tasks/{id}/execute	Thực thi task (async)
+GET	/api/executions/{id}	Xem chi tiết lần thực thi
+GET	/api/executions/{id}/logs	Xem log chi tiết
+GET	/api/dashboard/jira-tasks	Lấy task từ Jira
+POST	/api/dashboard/sync	Đồng bộ Jira
+5.3. Ví dụ API
+POST /api/tasks - Tạo task mới
+json
+Request:
+{
+  "name": "Tạo release mới",
+  "description": "Tự động tạo trên 4 hệ thống",
+  "priority": "HIGH",
+  "jira_config": {
+    "project_key": "PROJ",
+    "summary": "[Auto] Release v1.0",
+    "assignee": "john.doe@company.com",
+    "start_date": "2024-02-01",
+    "due_date": "2024-02-15"
+  },
+  "git_config": {
+    "repo_url": "https://github.com/company/repo",
+    "branch_prefix": "release"
+  },
+  "sharepoint_config": {
+    "site_url": "https://company.sharepoint.com/sites/Projects",
+    "template_file_id": "template-123"
+  },
+  "confluence_config": {
+    "space_key": "REL",
+    "page_template": "# Release Documentation"
+  }
+}
+
+Response:
+{
+  "success": true,
+  "data": {
+    "id": "task-uuid-123",
+    "task_key": "TASK-001",
+    "status": "PENDING"
+  }
+}
+________________________________________
+PHẦN 6: CÔNG NGHỆ SỬ DỤNG
+6.1. Frontend
+Công nghệ	Mục đích	Lý do chọn
+React.js	Giao diện	Component-based, nhiều thư viện
+TypeScript	Kiểm tra kiểu	Giảm lỗi, dễ bảo trì
+TailwindCSS	Styling	Nhanh, responsive
+React Query	Quản lý API	Cache, auto-refresh
+WebSocket	Real-time	Cập nhật tức thì
+6.2. Backend
+Công nghệ	Mục đích	Lý do chọn
+Python 3.11+	Ngôn ngữ	Dễ đọc, nhiều thư viện
+FastAPI	Framework	Nhanh, async, auto-docs
+SQLAlchemy	ORM	Linh hoạt, async support
+Celery	Async queue	Xử lý ngầm, retry
+Redis	Message broker + Cache	Nhanh, hỗ trợ Celery
+6.3. Database
+Công nghệ	Mục đích	Lý do chọn
+PostgreSQL 15+	Database chính	JSONB support, ACID
+Redis	Cache + Session	Tốc độ cao
+6.4. Triển khai
+Công nghệ	Mục đích
+Docker	Containerization
+Docker Compose	Orchestration local
+NGINX	Reverse proxy
+________________________________________
+PHẦN 7: KẾ HOẠCH TRIỂN KHAI
+7.1. Các giai đoạn
+Giai đoạn	Thời gian	Nội dung
+Phase 1	2 tuần	Nền tảng cơ bản: Docker, Database, API CRUD, Auth
+Phase 2	1 tuần	Tích hợp Jira: Adapter, tạo ticket, đồng bộ
+Phase 3	2 tuần	Tích hợp Git, SharePoint, Confluence
+Phase 4	1 tuần	Async processing + Transaction Manager
+Phase 5	1 tuần	Hoàn thiện giao diện React
+Phase 6	1 tuần	Kiểm thử + Triển khai
+Tổng	8 tuần	
+7.2. Mốc thời gian
+Tuần	Nội dung
+Tuần 1-2	Phase 1
+Tuần 3	Phase 2
+Tuần 4-5	Phase 3
+Tuần 6	Phase 4
+Tuần 7	Phase 5
+Tuần 8	Phase 6
+________________________________________
+PHẦN 8: KẾT LUẬN
+8.1. Tóm tắt giải pháp
+Yêu cầu	Giải pháp
+Dashboard hiển thị task Jira	Bảng JIRA_DETAILS + Sync Service
+Tạo/Edit/Delete task	Task Service + CRUD API
+Tự động tạo Jira ticket	Jira Adapter
+Tự động tạo Git branch	Git Adapter
+Tự động tạo SharePoint folder	SharePoint Adapter
+Tự động tạo Confluence page	Confluence Adapter
+Đảm bảo nhất quán dữ liệu	Transaction Manager + Compensation Callback
+Theo dõi lịch sử	Execution Logs + Step Logs
+8.2. Lợi ích mang lại
+•	⏱️ Tiết kiệm thời gian: Từ 15 phút thao tác thủ công xuống 1 click
+•	🔗 Đồng bộ dữ liệu: 4 hệ thống được tạo đồng thời, nhất quán
+•	🔄 Tự động rollback: Lỗi xảy ra, tự động xóa dữ liệu đã tạo
+•	📊 Quản lý tập trung: Mọi task hiển thị trên 1 dashboard
+•	🔍 Dễ dàng theo dõi: Lịch sử và log chi tiết
+8.3. Cam kết
+•	✅ Bàn giao đầy đủ source code và tài liệu
+•	✅ Hỗ trợ triển khai và đào tạo
+•	✅ Bảo hành 3 tháng sau bàn giao
+•	✅ Hỗ trợ kỹ thuật trong suốt quá trình sử dụng
+________________________________________
+Tài liệu được lập bởi: [Tên bạn]
+Chức vụ: [Chức vụ]
+Liên hệ: [Email] - [Số điện thoại]
+

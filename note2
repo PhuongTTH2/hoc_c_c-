@@ -1,0 +1,787 @@
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           PRESENTATION LAYER                                    │
+│  ┌───────────────────────────────────────────────────────────────────────────┐ │
+│  │                    FRONTEND - React.js                                   │ │
+│  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────────┐   │ │
+│  │  │ Dashboard   │ │ Task List   │ │ Create/Edit │ │ Execution Log   │   │ │
+│  │  │ (Jira View) │ │ (CRUD)      │ │ Task Form   │ │ & Reports      │   │ │
+│  │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────────┘   │ │
+│  └───────────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                                          │
+                                          │ HTTPS / REST API / WebSocket
+                                          ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           APPLICATION LAYER                                     │
+│  ┌───────────────────────────────────────────────────────────────────────────┐ │
+│  │                    API GATEWAY (FastAPI)                                 │ │
+│  │              Authentication, Rate Limiting, Logging                      │ │
+│  └───────────────────────────────────────────────────────────────────────────┘ │
+│                                          │                                      │
+│  ┌───────────────────────────────────────────────────────────────────────────┐ │
+│  │                    MICROSERVICES (Python)                                 │ │
+│  │  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────────────┐    │ │
+│  │  │ Task Service    │ │ Integration     │ │ Sync Service           │    │ │
+│  │  │ (CRUD Tasks)    │ │ Service         │ │ (Jira Sync)            │    │ │
+│  │  └─────────────────┘ └─────────────────┘ └─────────────────────────┘    │ │
+│  │  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────────────┐    │ │
+│  │  │ Auth Service    │ │ Notification    │ │ Report Service         │    │ │
+│  │  │ (JWT)           │ │ Service         │ │ (Analytics)            │    │ │
+│  │  └─────────────────┘ └─────────────────┘ └─────────────────────────┘    │ │
+│  └───────────────────────────────────────────────────────────────────────────┘ │
+│                                          │                                      │
+│  ┌───────────────────────────────────────────────────────────────────────────┐ │
+│  │                    MESSAGE QUEUE (RabbitMQ/Celery)                        │ │
+│  │              Async Processing, Retry Mechanism, Task Queue               │ │
+│  └───────────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                                          │
+                                          ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              DATA LAYER                                        │
+│  ┌───────────────────────────────────────────────────────────────────────────┐ │
+│  │              POSTGRESQL (Primary Database)                               │ │
+│  │  ┌─────────────────────────────────────────────────────────────────────┐ │ │
+│  │  │                         TASKS TABLE                                │ │ │
+│  │  │      (Chứa thông tin task + 4 IDs liên kết)                        │ │ │
+│  │  └─────────────────────────────────────────────────────────────────────┘ │ │
+│  │         │              │              │              │                   │ │
+│  │         ▼              ▼              ▼              ▼                   │ │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐               │ │
+│  │  │  Jira    │  │   Git    │  │SharePoint│  │Confluence│               │ │
+│  │  │ Details  │  │ Details  │  │ Details  │  │ Details  │               │ │
+│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘               │ │
+│  └───────────────────────────────────────────────────────────────────────────┘ │
+│  ┌───────────────────────────────────────────────────────────────────────────┐ │
+│  │                    REDIS (Cache & Session)                               │ │
+│  │              Session Storage, API Response Cache, Rate Limiting         │ │
+│  └───────────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                                          │
+                                          ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                         EXTERNAL INTEGRATION LAYER                              │
+│  ┌──────────┐    ┌──────────┐    ┌──────────────┐    ┌──────────────┐        │
+│  │   Jira   │    │   Git    │    │  SharePoint  │    │  Confluence  │        │
+│  │   API    │    │   API    │    │     API      │    │     API      │        │
+│  └──────────┘    └──────────┘    └──────────────┘    └──────────────┘        │
+│       │               │                 │                   │                  │
+│       ▼               ▼                 ▼                   ▼                  │
+│  ┌──────────────────────────────────────────────────────────────────────┐     │
+│  │              INTEGRATION ADAPTERS (Python SDK)                       │     │
+│  │  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐       │     │
+│  │  │ Jira       │ │ Git        │ │ SharePoint │ │ Confluence │       │     │
+│  │  │ Adapter    │ │ Adapter    │ │ Adapter    │ │ Adapter    │       │     │
+│  │  └────────────┘ └────────────┘ └────────────┘ └────────────┘       │     │
+│  └──────────────────────────────────────────────────────────────────────┘     │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+
+Layer	Công nghệ	Lý do chọn
+Frontend	
+React.js + TypeScript	UI động, component-based, type safety
+TailwindCSS	Styling nhanh, responsive
+React Query	Quản lý state và cache API calls
+WebSocket	Real-time updates
+Backend	
+Python 3.11+	Ngôn ngữ mạnh mẽ, nhiều thư viện integration
+FastAPI	High performance, auto-docs, async support
+SQLAlchemy	ORM mạnh mẽ, hỗ trợ async
+Alembic	Database migration
+Celery + Redis	Async task queue, scheduled jobs
+Pydantic	Data validation
+Database
+PostgreSQL 15+	ACID compliance, JSONB support, full-text search
+Redis 7+	Caching, session storage, rate limiting
+Message Queue	Celery + Redis/RabbitMQ	Xử lý bất đồng bộ, retry mechanism
+Monitoring	Prometheus + Grafana	Metrics và monitoring
+Sentry	Error tracking
+
+Deployment	Docker + Docker Compose	Containerization
+Kubernetes (optional)	Orchestration cho scale lớn
+Cloud	AWS/Azure/GCP	Tùy chọn khách hàng
+
+User ──► React Dashboard (Xem task từ Jira)
+   │
+   ├──► Tạo Task mới ──► FastAPI ──► PostgreSQL (Lưu task)
+   │                        │
+   │                        ▼
+   │                   Celery Queue
+   │                        │
+   │                        ▼
+   │              Integration Service
+   │                        │
+   │    ┌───────────────────┼───────────────────┐
+   │    ▼                   ▼                   ▼
+   │ Jira API          Git API           SharePoint API
+   │ (Tạo task)       (Tạo branch)      (Tạo folder)
+   │    │                   │                   │
+   │    └───────────────────┼───────────────────┘
+   │                        ▼
+   │              Cập nhật Task với 4 IDs
+   │                        │
+   └──► WebSocket ──► UI hiển thị kết quả real-time
+
+
+
+
+   PHẦN 2: SYSTEM DESIGN
+   ┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                                    USERS                                            │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐   │
+│  │ id (PK) │ email │ username │ full_name │ role │ jira_credentials │ ...    │   │
+│  └─────────────────────────────────────────────────────────────────────────────┘   │
+│                                      │ 1                                          │
+│                                      │                                            │
+│                                      │ N                                          │
+│                                      ▼                                            │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐   │
+│  │                              TASKS (Central)                                 │   │
+│  │  ┌───────────────────────────────────────────────────────────────────────┐ │   │
+│  │  │ id (PK) │ task_key │ name │ status │ priority │ created_by (FK)      │ │   │
+│  │  │ jira_id (FK) │ git_id (FK) │ sharepoint_id (FK) │ confluence_id (FK) │ │   │
+│  │  └───────────────────────────────────────────────────────────────────────┘ │   │
+│  └─────────────────────────────────────────────────────────────────────────────┘   │
+│       │ 1            │ 1            │ 1            │ 1                            │
+│       ▼              ▼              ▼              ▼                            │
+│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐                   │
+│  │    Jira    │ │    Git     │ │ SharePoint │ │ Confluence │                   │
+│  │  Details   │ │  Details   │ │  Details   │ │  Details   │                   │
+│  └────────────┘ └────────────┘ └────────────┘ └────────────┘                   │
+│                                                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐   │
+│  │                        EXECUTION LOGS                                       │   │
+│  │  id │ task_id (FK) │ status │ started_at │ completed_at │ jira_result │   │   │
+│  └─────────────────────────────────────────────────────────────────────────────┘   │
+│                                      │ 1                                          │
+│                                      │                                            │
+│                                      │ N                                          │
+│                                      ▼                                            │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐   │
+│  │                           STEP LOGS                                         │   │
+│  │  id │ execution_id (FK) │ integration_type │ request │ response │ status │   │
+│  └─────────────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    full_name VARCHAR(255),
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(20) DEFAULT 'USER', -- ADMIN, USER, VIEWER
+    
+    -- Jira credentials (encrypted)
+    jira_account_id VARCHAR(100),
+    jira_display_name VARCHAR(255),
+    jira_email VARCHAR(255),
+    
+    -- Preferences
+    preferences JSONB DEFAULT '{}',
+    
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP,
+    is_active BOOLEAN DEFAULT true
+);
+
+CREATE TABLE tasks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    task_key VARCHAR(50) UNIQUE NOT NULL, -- TASK-001, AUTO-001
+    
+    -- Basic information
+    name VARCHAR(500) NOT NULL,
+    description TEXT,
+    status VARCHAR(50) DEFAULT 'DRAFT', -- DRAFT, PENDING, IN_PROGRESS, COMPLETED, FAILED, CANCELLED
+    priority VARCHAR(20) DEFAULT 'MEDIUM', -- LOW, MEDIUM, HIGH, CRITICAL
+    
+    -- ⭐⭐⭐ 4 ID LIÊN KẾT QUAN TRỌNG ⭐⭐⭐
+    jira_id UUID,
+    git_id UUID,
+    sharepoint_id UUID,
+    confluence_id UUID,
+    
+    -- User who created/executed
+    created_by UUID REFERENCES users(id),
+    executed_by UUID REFERENCES users(id),
+    
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    scheduled_at TIMESTAMP,
+    executed_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    
+    -- Metadata
+    metadata JSONB DEFAULT '{}'
+);
+
+-- Indexes
+CREATE INDEX idx_tasks_status ON tasks(status);
+CREATE INDEX idx_tasks_created_by ON tasks(created_by);
+CREATE INDEX idx_tasks_priority ON tasks(priority);
+CREATE INDEX idx_tasks_created_at ON tasks(created_at);
+
+
+
+CREATE TABLE jira_details (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Jira identification
+    jira_ticket_key VARCHAR(50) UNIQUE NOT NULL, -- PROJ-123
+    jira_ticket_id VARCHAR(50), -- Internal Jira ID
+    jira_ticket_url VARCHAR(500),
+    
+    -- ⭐ Task information from Jira ⭐
+    task_name VARCHAR(500) NOT NULL, -- Tên task trên Jira
+    task_description TEXT, -- Mô tả task
+    
+    -- ⭐ People ⭐
+    created_by VARCHAR(255), -- Người tạo task (Jira display name)
+    created_by_account_id VARCHAR(100), -- Jira account ID
+    assignee_name VARCHAR(255), -- Người được giao
+    assignee_account_id VARCHAR(100),
+    reporter_name VARCHAR(255), -- Người báo cáo
+    reporter_account_id VARCHAR(100),
+    
+    -- ⭐ Dates ⭐
+    start_date DATE, -- Ngày bắt đầu
+    due_date DATE, -- Ngày kết thúc (end date)
+    jira_created_date TIMESTAMP, -- Ngày tạo trên Jira
+    jira_updated_date TIMESTAMP, -- Ngày cập nhật
+    resolution_date TIMESTAMP, -- Ngày giải quyết
+    
+    -- ⭐ Priority ⭐
+    priority VARCHAR(50), -- Highest, High, Medium, Low, Lowest
+    
+    -- Additional Jira fields
+    issue_type VARCHAR(50), -- Task, Bug, Story, Epic
+    project_key VARCHAR(50),
+    project_name VARCHAR(255),
+    status VARCHAR(50), -- To Do, In Progress, Done
+    status_category VARCHAR(50), -- To Do, In Progress, Done
+    
+    -- Custom fields
+    custom_fields JSONB DEFAULT '{}',
+    
+    -- Labels and components
+    labels JSONB DEFAULT '[]',
+    components JSONB DEFAULT '[]',
+    
+    -- Full response from Jira API
+    raw_response JSONB DEFAULT '{}',
+    
+    -- Sync info
+    last_sync_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_synced BOOLEAN DEFAULT true,
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for quick search
+CREATE INDEX idx_jira_ticket_key ON jira_details(jira_ticket_key);
+CREATE INDEX idx_jira_assignee ON jira_details(assignee_account_id);
+CREATE INDEX idx_jira_status ON jira_details(status);
+CREATE INDEX idx_jira_priority ON jira_details(priority);
+CREATE INDEX idx_jira_start_date ON jira_details(start_date);
+CREATE INDEX idx_jira_due_date ON jira_details(due_date);
+CREATE INDEX idx_jira_created_date ON jira_details(jira_created_date);
+
+
+CREATE TABLE git_details (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Branch information
+    branch_name VARCHAR(255) NOT NULL,
+    branch_url VARCHAR(500),
+    branch_sha VARCHAR(100),
+    
+    -- Repository
+    repo_url VARCHAR(500),
+    repo_name VARCHAR(255),
+    repo_owner VARCHAR(255),
+    base_branch VARCHAR(100) DEFAULT 'main',
+    
+    -- Commit
+    commit_message TEXT,
+    commit_url VARCHAR(500),
+    commit_sha VARCHAR(100),
+    commit_author VARCHAR(255),
+    commit_date TIMESTAMP,
+    
+    -- Provider
+    provider VARCHAR(20) DEFAULT 'GITHUB', -- GITHUB, GITLAB, BITBUCKET
+    
+    -- Webhook
+    webhook_url VARCHAR(500),
+    webhook_secret VARCHAR(255),
+    
+    -- Pull Request (if created)
+    pr_number INTEGER,
+    pr_url VARCHAR(500),
+    pr_status VARCHAR(50),
+    
+    raw_response JSONB DEFAULT '{}',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_git_branch_name ON git_details(branch_name);
+CREATE INDEX idx_git_repo ON git_details(repo_name);
+
+
+CREATE TABLE sharepoint_details (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Folder information
+    folder_name VARCHAR(255) NOT NULL,
+    folder_path VARCHAR(500),
+    folder_url VARCHAR(500),
+    folder_id VARCHAR(100),
+    
+    -- Site information
+    site_url VARCHAR(500),
+    site_id VARCHAR(100),
+    site_name VARCHAR(255),
+    drive_id VARCHAR(100),
+    document_library VARCHAR(255),
+    
+    -- Template
+    template_file_id VARCHAR(100),
+    template_name VARCHAR(255),
+    template_url VARCHAR(500),
+    copied_file_id VARCHAR(100),
+    copied_file_name VARCHAR(255),
+    copied_file_url VARCHAR(500),
+    
+    -- Permissions
+    permissions JSONB DEFAULT '{}',
+    
+    raw_response JSONB DEFAULT '{}',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_sharepoint_folder ON sharepoint_details(folder_path);
+
+
+
+CREATE TABLE execution_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    task_id UUID REFERENCES tasks(id) ON DELETE CASCADE,
+    
+    execution_number INTEGER,
+    triggered_by UUID REFERENCES users(id),
+    trigger_type VARCHAR(20) DEFAULT 'MANUAL', -- MANUAL, SCHEDULED, WEBHOOK
+    
+    status VARCHAR(20) DEFAULT 'PENDING', -- PENDING, RUNNING, SUCCESS, PARTIAL, FAILED
+    
+    -- Results from each integration
+    jira_result JSONB DEFAULT '{}',
+    git_result JSONB DEFAULT '{}',
+    sharepoint_result JSONB DEFAULT '{}',
+    confluence_result JSONB DEFAULT '{}',
+    
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP,
+    duration_ms FLOAT,
+    
+    error_message TEXT,
+    failed_step VARCHAR(50),
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_execution_task ON execution_logs(task_id);
+CREATE INDEX idx_execution_status ON execution_logs(status);
+CREATE INDEX idx_execution_started ON execution_logs(started_at);
+
+
+CREATE TABLE notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id),
+    task_id UUID REFERENCES tasks(id),
+    execution_id UUID REFERENCES execution_logs(id),
+    
+    type VARCHAR(20), -- SUCCESS, ERROR, WARNING, INFO
+    title VARCHAR(255),
+    message TEXT,
+    
+    is_read BOOLEAN DEFAULT false,
+    read_at TIMESTAMP,
+    
+    channels JSONB DEFAULT '["web"]', -- web, email, slack
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_notification_user ON notifications(user_id);
+CREATE INDEX idx_notification_read ON notifications(is_read);
+
+
+CREATE TABLE sync_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    sync_type VARCHAR(50), -- FULL, INCREMENTAL
+    project_keys JSONB DEFAULT '[]',
+    
+    status VARCHAR(20), -- RUNNING, SUCCESS, FAILED
+    
+    tasks_synced INTEGER DEFAULT 0,
+    tasks_created INTEGER DEFAULT 0,
+    tasks_updated INTEGER DEFAULT 0,
+    
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP,
+    
+    error_message TEXT,
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+# GET /api/tasks - Lấy danh sách tasks
+GET /api/tasks?status=active&priority=high&page=1&limit=20
+
+Response:
+{
+  "data": [
+    {
+      "id": "uuid",
+      "task_key": "TASK-001",
+      "name": "Create Release Process",
+      "status": "COMPLETED",
+      "priority": "HIGH",
+      "jira": {
+        "ticket_key": "PROJ-123",
+        "task_name": "Implement Feature",
+        "assignee": "John Doe",
+        "start_date": "2024-01-15",
+        "due_date": "2024-01-30",
+        "priority": "High",
+        "status": "In Progress"
+      },
+      "git": {
+        "branch_name": "feature/PROJ-123",
+        "branch_url": "https://github.com/...",
+        "repo_name": "my-repo"
+      },
+      "sharepoint": {
+        "folder_name": "PROJ-123_Feature",
+        "folder_url": "https://company.sharepoint.com/..."
+      },
+      "confluence": {
+        "page_title": "PROJ-123 - Feature Documentation",
+        "page_url": "https://confluence.atlassian.com/..."
+      },
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 45
+  }
+}
+
+# POST /api/tasks - Tạo task mới
+POST /api/tasks
+Request:
+{
+  "name": "New Feature Development",
+  "description": "Implement automation for project X",
+  "priority": "HIGH",
+  "jira_config": {
+    "project_key": "PROJ",
+    "issue_type": "Task",
+    "summary": "[Auto] New Feature",
+    "description": "Created by automation tool",
+    "assignee": "john.doe@company.com",
+    "priority": "High",
+    "start_date": "2024-02-01",
+    "due_date": "2024-02-15"
+  },
+  "git_config": {
+    "repo_url": "https://github.com/company/repo",
+    "branch_prefix": "feature",
+    "base_branch": "main"
+  },
+  "sharepoint_config": {
+    "site_url": "https://company.sharepoint.com/sites/Projects",
+    "folder_template": "/{project_key}/{ticket_key}_{task_name}",
+    "template_file_id": "template-id"
+  },
+  "confluence_config": {
+    "space_key": "DEV",
+    "parent_page_id": "12345",
+    "page_template": "# {task_name}\n\n## Description\n{description}"
+  }
+}
+
+Response:
+{
+  "id": "uuid",
+  "task_key": "TASK-002",
+  "status": "PENDING",
+  "links": {
+    "self": "/api/tasks/uuid",
+    "execute": "/api/tasks/uuid/execute"
+  }
+}
+
+# GET /api/tasks/{id} - Lấy chi tiết task với 4 integrations
+GET /api/tasks/{id}
+
+Response:
+{
+  "id": "uuid",
+  "task_key": "TASK-001",
+  "name": "Create Release Process",
+  "description": "Automated release process",
+  "status": "COMPLETED",
+  "priority": "HIGH",
+  "jira": {
+    "id": "jira-uuid",
+    "ticket_key": "PROJ-123",
+    "ticket_url": "https://jira/browse/PROJ-123",
+    "task_name": "Implement Automation",
+    "created_by": "John Doe",
+    "assignee": "Jane Smith",
+    "start_date": "2024-01-15",
+    "due_date": "2024-01-30",
+    "priority": "High",
+    "status": "In Progress"
+  },
+  "git": {
+    "id": "git-uuid",
+    "branch_name": "feature/PROJ-123",
+    "branch_url": "https://github.com/...",
+    "repo_url": "https://github.com/company/repo",
+    "commit_sha": "abc123..."
+  },
+  "sharepoint": {
+    "id": "sp-uuid",
+    "folder_name": "PROJ-123_Feature",
+    "folder_url": "https://company.sharepoint.com/...",
+    "copied_file_url": "https://company.sharepoint.com/.../template.docx"
+  },
+  "confluence": {
+    "id": "conf-uuid",
+    "page_id": "123456",
+    "page_title": "PROJ-123 - Feature Documentation",
+    "page_url": "https://confluence/display/DEV/PROJ-123",
+    "space_key": "DEV"
+  },
+  "execution": {
+    "id": "exec-uuid",
+    "status": "SUCCESS",
+    "started_at": "2024-01-01T10:00:00Z",
+    "completed_at": "2024-01-01T10:00:30Z",
+    "duration_ms": 30000
+  },
+  "created_at": "2024-01-01T09:00:00Z"
+}
+
+# POST /api/tasks/{id}/execute - Thực thi task
+POST /api/tasks/{id}/execute
+
+Response:
+{
+  "execution_id": "exec-uuid",
+  "task_id": "task-uuid",
+  "status": "RUNNING",
+  "message": "Task execution started",
+  "estimated_duration": "30 seconds",
+  "links": {
+    "status": "/api/executions/exec-uuid",
+    "logs": "/api/executions/exec-uuid/logs",
+    "websocket": "ws://localhost:8000/ws/executions/exec-uuid"
+  }
+}
+
+# GET /api/dashboard/jira-tasks - Lấy task từ Jira
+GET /api/dashboard/jira-tasks?project=PROJ&assignee=me&status=In%20Progress
+
+Response:
+{
+  "tasks": [
+    {
+      "ticket_key": "PROJ-123",
+      "task_name": "Implement Automation",
+      "description": "Create web tool...",
+      "created_by": "John Doe",
+      "assignee": "Jane Smith",
+      "start_date": "2024-01-15",
+      "due_date": "2024-01-30",
+      "priority": "High",
+      "status": "In Progress",
+      "jira_url": "https://jira/browse/PROJ-123",
+      "sync_status": "synced",
+      "our_system_task_id": "task-uuid"
+    }
+  ],
+  "summary": {
+    "total": 15,
+    "by_status": {
+      "To Do": 5,
+      "In Progress": 8,
+      "Done": 2
+    },
+    "by_priority": {
+      "Highest": 1,
+      "High": 4,
+      "Medium": 7,
+      "Low": 3
+    },
+    "overdue": 2,
+    "due_this_week": 5
+  },
+  "last_sync": "2024-01-02T10:00:00Z"
+}
+
+# POST /api/dashboard/sync-jira - Đồng bộ Jira
+POST /api/dashboard/sync-jira
+Request:
+{
+  "project_keys": ["PROJ", "DEV"],
+  "since": "2024-01-01"
+}
+
+Response:
+{
+  "sync_id": "sync-uuid",
+  "status": "RUNNING",
+  "message": "Sync started",
+  "estimated_tasks": 150
+}
+
+
+backend/
+├── app/
+│   ├── api/
+│   │   ├── __init__.py
+│   │   ├── dependencies.py
+│   │   ├── v1/
+│   │   │   ├── __init__.py
+│   │   │   ├── tasks.py          # Task CRUD endpoints
+│   │   │   ├── dashboard.py      # Dashboard endpoints
+│   │   │   ├── executions.py     # Execution endpoints
+│   │   │   ├── integrations.py   # Integration endpoints
+│   │   │   └── auth.py           # Authentication endpoints
+│   │
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── config.py              # Settings
+│   │   ├── security.py            # JWT, password hashing
+│   │   ├── database.py            # Database connection
+│   │   └── celery_app.py          # Celery config
+│   │
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── task.py                # Task model
+│   │   ├── jira.py                # JiraDetails model
+│   │   ├── git.py                 # GitDetails model
+│   │   ├── sharepoint.py          # SharePointDetails model
+│   │   ├── confluence.py          # ConfluenceDetails model
+│   │   ├── execution.py           # ExecutionLog, StepLog
+│   │   ├── user.py                # User model
+│   │   └── notification.py        # Notification model
+│   │
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   ├── task.py                # Pydantic schemas for Task
+│   │   ├── jira.py                # Jira schemas
+│   │   ├── execution.py           # Execution schemas
+│   │   └── response.py            # Common response schemas
+│   │
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── task_service.py        # Business logic for tasks
+│   │   ├── integration_service.py # Main integration orchestrator
+│   │   ├── jira_service.py        # Jira API calls
+│   │   ├── git_service.py         # Git API calls
+│   │   ├── sharepoint_service.py  # SharePoint API calls
+│   │   ├── confluence_service.py  # Confluence API calls
+│   │   ├── sync_service.py        # Jira sync service
+│   │   └── notification_service.py # Notifications
+│   │
+│   ├── workers/
+│   │   ├── __init__.py
+│   │   ├── task_executor.py       # Celery task for execution
+│   │   └── jira_sync_worker.py    # Celery task for Jira sync
+│   │
+│   ├── adapters/
+│   │   ├── __init__.py
+│   │   ├── base_adapter.py        # Base integration adapter
+│   │   ├── jira_adapter.py        # Jira API adapter
+│   │   ├── git_adapter.py         # Git API adapter
+│   │   ├── sharepoint_adapter.py  # SharePoint adapter
+│   │   └── confluence_adapter.py  # Confluence adapter
+│   │
+│   └── main.py                    # FastAPI app entry point
+│
+├── alembic/                       # Database migrations
+├── requirements.txt
+├── Dockerfile
+├── docker-compose.yml
+└── .env
+
+
+
+TẦNG 1 - PRESENTATION (Tầng giao diện) - "Nơi khách hàng giao tiếp"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Giống như quầy lễ tân của tòa nhà:
+- Đây là nơi người dùng nhìn thấy và tương tác trực tiếp
+- Giao diện web (React) hiển thị dashboard, nút bấm, form nhập liệu
+- Khi bạn click "Tạo task", yêu cầu được gửi xuống tầng dưới
+- Khi hệ thống xử lý xong, kết quả hiển thị ngay trên màn hình
+
+Ví dụ: Bạn mở web, thấy danh sách task từ Jira, click "Tạo mới", điền thông tin
+
+
+TẦNG 2 - APPLICATION (Tầng xử lý nghiệp vụ) - "Nơi xử lý công việc"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Giống như các phòng ban xử lý công việc:
+- Nhận yêu cầu từ tầng trên, kiểm tra xem ai có quyền làm gì
+- Xử lý logic: "Tạo task này thì cần gọi Jira trước, rồi Git, rồi SharePoint"
+- Điều phối các công việc, đảm bảo thứ tự đúng
+- Nếu có lỗi, xử lý retry hoặc báo lỗi
+
+Ví dụ: Nhận yêu cầu tạo task, hệ thống tự động quyết định: 
+"Phải tạo Jira ticket trước, lấy mã PROJ-123, sau đó tạo Git branch tên feature/PROJ-123"
+
+
+TẦNG 3 - DATA (Tầng dữ liệu) - "Nơi lưu trữ thông tin"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Giống như kho lưu trữ hồ sơ:
+- Lưu tất cả thông tin: task đã tạo, kết quả từ Jira, branch Git đã tạo...
+- Dữ liệu được tổ chức có cấu trúc, dễ tìm kiếm
+- Mỗi task có 4 "thẻ ID" để liên kết với 4 hệ thống bên ngoài
+- Lưu cả lịch sử: ai tạo, lúc nào, thành công hay thất bại
+
+Ví dụ: Khi tạo xong task, kho lưu trữ ghi nhận:
+"Task A có Jira ID = PROJ-123, Git branch = feature/123, được tạo lúc 10:00 bởi anh Nam"
+
+
+TẦNG 4 - INTEGRATION (Tầng kết nối) - "Nơi giao tiếp với thế giới bên ngoài"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Giống như bộ phận liên lạc với đối tác:
+- Gọi API đến Jira để tạo ticket
+- Gọi API đến Git (GitHub/GitLab) để tạo branch
+- Gọi API đến SharePoint để tạo folder
+- Gọi API đến Confluence để tạo page
+- Nhận kết quả và báo cáo lại cho tầng Application
+
+Ví dụ: Hệ thống gửi yêu cầu "Tạo ticket với tiêu đề ABC" sang Jira, 
+Jira trả về "Đã tạo xong, mã ticket là PROJ-123"
+
+
+Yêu cầu	Giải pháp
+Dashboard hiển thị task từ Jira	JIRA_DETAILS lưu đủ thông tin, sync tự động
+Tạo/Edit/Delete task	Task Service với CRUD API
+Tự động gửi đến Jira	Jira Adapter + Async processing
+Tự động tạo branch Git	Git Adapter
+Tự động tạo folder SharePoint	SharePoint Adapter
+Tự động tạo page Confluence	Confluence Adapter
+Theo dõi lịch sử	Execution logs + Step logs đầy đủ
+Hệ thống ổn định, dễ mở rộng	Microservices + Docker
+Trải nghiệm mượt mà	Async + WebSocket real-time
