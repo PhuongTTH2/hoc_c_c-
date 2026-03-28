@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # Database PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: web_tool_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: webuser
+      POSTGRES_PASSWORD: webpass123
+      POSTGRES_DB: web_tool_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - web_tool_network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: web_tool_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - web_tool_network
+
+  # Backend API
+  backend:
+    build: ./backend
+    container_name: web_tool_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://webuser:webpass123@postgres:5432/web_tool_db
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    networks:
+      - web_tool_network
+    depends_on:
+      - postgres
+      - redis
+
+  # Frontend
+  frontend:
+    build: ./frontend
+    container_name: web_tool_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - web_tool_network
+    depends_on:
+      - backend
+
+networks:
+  web_tool_network:
+    driver: bridge
+
+volumes:
+  postgres_data:

@@ -1,0 +1,156 @@
+web-tool\
+│
+├── docker-compose.yml
+├── .env
+│
+├── backend\
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   ├── app\
+│   │   ├── __init__.py
+│   │   ├── main.py
+│   │   ├── api\
+│   │   │   ├── __init__.py
+│   │   │   └── tasks.py
+│   │   ├── models\
+│   │   │   ├── __init__.py
+│   │   │   ├── task.py
+│   │   │   └── user.py
+│   │   └── core\
+│   │       ├── __init__.py
+│   │       ├── database.py
+│   │       └── config.py
+│   └── alembic\
+│
+├── frontend\
+│   ├── Dockerfile
+│   ├── package.json
+│   ├── index.html
+│   ├── src\
+│   │   ├── App.tsx
+│   │   ├── main.tsx
+│   │   ├── components\
+│   │   └── pages\
+│   └── public\
+│
+└── nginx\
+    └── nginx.conf
+
+
+frontend/
+├── Dockerfile
+├── package.json
+├── package-lock.json (sẽ tự tạo sau khi npm install)
+├── index.html
+├── vite.config.ts
+├── tsconfig.json
+├── tsconfig.node.json
+├── .gitignore
+├── src/
+│   ├── main.tsx
+│   ├── App.tsx
+│   ├── vite-env.d.ts
+│   ├── api/
+│   │   └── client.ts
+│   ├── components/
+│   │   ├── Layout.tsx
+│   │   ├── TaskCard.tsx
+│   │   ├── TaskForm.tsx
+│   │   ├── StatusBadge.tsx
+│   │   └── LoadingSpinner.tsx
+│   ├── pages/
+│   │   ├── Dashboard.tsx
+│   │   ├── TaskList.tsx
+│   │   ├── TaskDetail.tsx
+│   │   ├── CreateTask.tsx
+│   │   └── Login.tsx
+│   ├── hooks/
+│   │   └── useTasks.ts
+│   ├── types/
+│   │   └── index.ts
+│   └── styles/
+│       └── index.css
+└── public/
+    └── vite.svg
+
+
+# Mở PowerShell
+docker --version
+# Kết quả: Docker version 24.0.7, build ...
+
+docker-compose --version
+# Kết quả: Docker Compose version v2.23.0
+
+# Chạy thử
+docker run hello-world
+
+
+mkdir backend frontend nginx scripts
+
+Build và chạy
+docker-compose up -d --build
+
+
+# Xem các container đang chạy
+docker-compose ps
+
+# Xem log của backend
+docker-compose logs backend
+
+# Xem log của frontend
+docker-compose logs frontend
+
+
+# Khởi động lại tất cả
+docker-compose restart
+
+# Xem log real-time
+docker-compose logs -f
+
+# Dừng tất cả
+docker-compose down
+
+# Dừng và xóa database (cẩn thận)
+docker-compose down -v
+
+# Chạy command trong container backend
+docker-compose exec backend bash
+
+# Truy cập database
+docker-compose exec postgres psql -U webuser -d web_tool_db
+
+
+# Khởi động tất cả services
+docker-compose up -d
+
+http://localhost:3000	Frontend - Giao diện web
+http://localhost:8000	Backend API
+http://localhost:8000/docs	API Documentation (Swagger)
+http://localhost:8000/health	Health check
+
+
+
+cd D:\hoc_c_c++\hoc_c_c-Web-tool
+
+# Dừng container
+docker-compose down
+
+# Xóa image cũ
+docker rmi web-tool-frontend
+
+# Build lại
+docker-compose build --no-cache frontend
+
+# Chạy lại
+docker-compose up -d
+
+#stop
+docker-compose down
+
+# Kiểm tra log
+docker logs web_tool_frontend
+
+# Kết nối vào database container
+docker exec -it web_tool_postgres psql -U webuser -d web_tool_db
+
+
