@@ -1,0 +1,187 @@
+Từ setup → integration → transaction → async → test
+
+FRONTEND
+
+Tuần 1: Setup & UI Design
+Understand document	Xác định tài liệu
+UI/UX Design	Vẽ mockup dashboard, form, task list, upload
+React project setup	Vite + TypeScript
+Technology Selection	Xác định tech stack (MUI/Tailwind)
+
+Tuần 2: Core Components
+React Router	Routing: /login, /dashboard, /tasks, /upload
+API client	Axios setup, interceptors, mock API
+Login page	Giao diện đăng nhập
+Layout component	Header, sidebar, footer
+Task list page	Bảng hiển thị task (mock data)
+Dashboard page	Layout cơ bản
+
+Tuần 3: Dashboard Components
+KPI Cards	Total Tasks, Completed, Overdue, Success Rate
+Status Chart	Biểu đồ tròn (To Do, In Progress, Done)
+Priority Chart	Biểu đồ thanh (High, Medium, Low)
+Integration Cards	Git Branches / SharePoint Folders / Confluence Pages
+
+Tuần 4: Task & Upload Pages
+Task upload form	Form upload JSON file
+Task detail page	Hiển thị chi tiết task
+Execute button	Gọi API execute
+Execution status	Hiển thị PENDING, RUNNING, SUCCESS, FAILED
+
+Tuần 5: Advanced Features
+Overdue tasks list	Danh sách task bị trễ, highlight đỏ
+Date filters	Lọc theo Today, This Week, This Month
+Export to Excel	Xuất báo cáo
+Loading states	Skeleton loading
+
+Tuần 6: Testing & Integration
+Unit tests	Jest + React Testing Library
+Integration with real BE	Chuyển từ mock sang API thật
+Cancel execution	Nút hủy task đang chạy
+Bug fixes	Dashboard analytics
+
+Tuần 7: Optimization
+Performance optimization	Lazy loading, code splitting
+Responsive design	Mobile/tablet support
+Error handling	Toast notifications, error boundaries
+
+Tuần 8: CI/CD & Final
+Jenkins pipeline	Build, test, deploy
+E2E tests	Cypress
+Final polish	UI/UX refinement
+
+Tuần 9  
+Technical Documentation (API, Architecture, Deployment)
+
+Tuần 10 
+ User Documentation (Manual, Training, FAQ)
+ 
+Tuần 11 
+Fix bug + Performance Optimization
+
+Tuần 12 
+Final + Deploy Production + Handover
+
+
+
+BACKEND
+
+Tuần 1: Core Setup
+
+Understand document	Xác định tài liệu
+FastAPI project setup	Structure, dependencies
+PostgreSQL connection	SQLAlchemy, Alembic
+Redis connection	Cache setup
+User model	Bảng users
+Task model	Bảng tasks
+Basic CRUD APIs	GET, POST, PUT, DELETE /api/tasks
+
+Tuần 2: Jira Integration
+Jira Adapter	Tạo ticket, lấy ticket, update ticket
+Jira Details model	Bảng jira_details
+API	POST /api/tasks/{id}/jira
+Lưu response	Khi gọi thành công
+Unit tests	Jira adapter
+
+Tuần 3: Git, SharePoint, Confluence
+Git Adapter	Tạo branch, commit, PR
+Git Details model	Bảng git_details
+SharePoint Adapter	Tạo folder, copy template
+SharePoint Details model	Bảng sharepoint_details
+Confluence Adapter	Tạo page, update page
+Confluence Details model	Bảng confluence_details
+APIs	POST /git, /sharepoint, /confluence
+Unit tests	3 adapters
+
+
+Tuần 4: Execute & Transaction
+Integration Service	Điều phối gọi 4 adapters
+Transaction Manager	Class quản lý compensation stack
+Execute API	POST /api/tasks/{id}/execute
+Rollback logic	Gọi compensation khi lỗi
+Execution Logs model	Bảng execution_logs
+Step Logs model	Bảng step_logs
+Unit tests	Transaction, rollback
+
+Tuần 5: Async Processing
+Celery setup	Redis broker
+Celery task execute	Chuyển execute thành async
+Retry mechanism	Exponential backoff
+Task status tracking	Cập nhật status
+Scheduled sync	Celery beat đồng bộ Jira
+Database indexing	Indexes on status, created_at
+
+Tuần 6: Dashboard APIs
+GET /api/dashboard/stats	Thống kê tổng quan
+Overdue tasks query	Tasks due_date < today
+Tasks by status	Đếm theo status
+Tasks by priority	Đếm theo priority
+Tasks by assignee	Đếm theo người
+Completion rate	% task hoàn thành
+Tasks by project	Đếm theo project_key
+
+Tuần 7: Testing
+Unit tests	Pytest for all services
+Integration tests	Test flow: create → execute
+Fix bugs	Dashboard analytics
+
+Tuần 8: CI/CD & Final
+Jenkins pipeline	Build, test stages
+Test coverage report	>80% coverage
+Performance tuning	Query optimization
+API documentation	Swagger/OpenAPI
+
+Tuần 9  
+Technical Documentation (API, Architecture, Deployment)
+
+Tuần 10 
+ User Documentation (Manual, Training, FAQ)
+ 
+Tuần 11 
+Fix bug + Performance Optimization
+
+Tuần 12 
+Final + Deploy Production + Handover
+
+
+DEVOPS
+
+Tuần 1: Infrastructure Setup
+Understand document	Xác định tài liệu
+Dockerfiles	FE, BE, Nginx
+Docker Compose	Kết nối FE, BE, DB, Redis
+Environment variables	.env file setup
+Local environment	Kiểm tra chạy được
+
+
+Tuần 2: Database & Cache
+PostgreSQL container	Volume persistence
+Redis container	Cache configuration
+Health checks	Docker healthcheck
+Network setup	Bridge network
+
+
+Tuần 3: Support Jira Integration
+Jira webhook setup	Cấu hình webhook endpoint
+SSL certificate	HTTPS cho webhook
+Environment secrets	Jira token, API keys
+
+
+Tuần 4: Support Transaction
+Test environment	Separate test DB
+Rollback testing	Simulate failures
+
+
+Tuần 5: Jenkins Setup
+Jenkins server	Cài đặt Jenkins
+Jenkins pipeline	Groovy script
+Test stage	Chạy unit tests tự động
+Build stage	Build Docker images
+
+
+Tuần 6: Auto Deploy
+Auto deploy on pass	Nếu test pass, deploy
+Slack/Email notification	Thông báo build status
+Docker registry	Push image to registry
+
+Tuần 7: Monitoring

@@ -1,0 +1,80 @@
+web-tool/
+├── docker-compose.yml
+├── .env
+├── backend/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── main.py
+│   │   ├── api/
+│   │   │   ├── __init__.py
+│   │   │   ├── auth.py
+│   │   │   ├── tasks.py
+│   │   │   ├── dashboard.py
+│   │   │   └── webhooks.py
+│   │   ├── core/
+│   │   │   ├── __init__.py
+│   │   │   ├── config.py
+│   │   │   ├── database.py
+│   │   │   └── security.py
+│   │   ├── models/
+│   │   │   ├── __init__.py
+│   │   │   ├── user.py
+│   │   │   ├── task.py
+│   │   │   ├── jira.py
+│   │   │   ├── git.py
+│   │   │   ├── sharepoint.py
+│   │   │   ├── confluence.py
+│   │   │   └── execution.py
+│   │   └── schemas/
+│   │       ├── __init__.py
+│   │       └── task.py
+│   └── alembic/
+│       └── versions/
+├── frontend/
+│   ├── Dockerfile
+│   ├── package.json
+│   ├── index.html
+│   ├── vite.config.js
+│   ├── src/
+│   │   ├── main.jsx
+│   │   ├── App.jsx
+│   │   ├── api/
+│   │   │   └── client.js
+│   │   ├── pages/
+│   │   │   ├── Login.jsx
+│   │   │   ├── Dashboard.jsx
+│   │   │   └── Upload.jsx
+│   │   ├── components/
+│   │   │   ├── Layout.jsx
+│   │   │   ├── KpiCard.jsx
+│   │   │   ├── StatusBadge.jsx
+│   │   │   └── Charts.jsx
+│   │   └── styles/
+│   │       └── index.css
+│   └── public/
+│       └── index.html
+└── nginx/
+    └── nginx.conf
+
+
+
+# 1. Rebuild lại frontend (do đã sửa code)
+docker-compose restart frontend
+
+
+# 2. Rebuild backend
+docker-compose restart backend
+
+# 2. Kiểm tra log
+docker logs web_tool_frontend
+
+# 3. Mở browser
+http://localhost:3000
+
+# 4. Đăng nhập: admin@example.com / admin123
+
+# 5. Vào Upload Task, upload file JSON
+
+# 6. Vào Dashboard, xem task vừa upload hiển thị
