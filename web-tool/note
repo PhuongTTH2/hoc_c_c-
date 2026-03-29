@@ -154,3 +154,68 @@ docker logs web_tool_frontend
 docker exec -it web_tool_postgres psql -U webuser -d web_tool_db
 
 
+
+
+1. Vào Jira → Project Settings → Webhooks
+2. Thêm webhook mới:
+   - URL: https://your-domain.com/webhooks/jira
+   - Events: Chọn "Issue updated", "Issue status changed"
+3. Lưu lại
+
+1. Vào Repository → Settings → Webhooks
+2. Add webhook:
+   - Payload URL: https://your-domain.com/webhooks/git
+   - Content type: application/json
+   - Events: Chọn "Push events", "Pull request events"
+3. Lưu lại
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              JIRA / GIT                                     │
+│                                                                             │
+│  Khi có thay đổi (status, push code)                                        │
+│  └─────────────────────────────────────────────────────────────────────────┘
+│                                    │
+│                                    │ Webhook (HTTP POST)
+│                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         BACKEND (FastAPI)                                   │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  /webhooks/jira  ──► Nhận webhook, cập nhật DB                      │   │
+│  │  /webhooks/git   ──► Nhận webhook, cập nhật DB                      │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│                                    │ WebSocket broadcast                   │
+│                                    ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  WebSocket Manager ──► Gửi update đến tất cả client                 │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │ WebSocket (real-time)
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         FRONTEND (React)                                    │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  WebSocket Client ──► Nhận update, cập nhật UI ngay lập tức        │   │
+│  │                     ──► Hiển thị notification                       │   │
+│  │                     ──► Refresh dashboard                           │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+# 1. Rebuild lại frontend (do đã sửa code)
+docker-compose restart frontend
+
+# 2. Kiểm tra log
+docker logs web_tool_frontend
+
+# 3. Mở browser
+http://localhost:3000
+
+# 4. Đăng nhập: admin@example.com / admin123
+
+# 5. Vào Upload Task, upload file JSON
+
+# 6. Vào Dashboard, xem task vừa upload hiển thị

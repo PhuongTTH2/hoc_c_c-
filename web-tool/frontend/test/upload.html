@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Tool Automation - Upload Task</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            color: #1a1a2e;
+        }
+
+        /* ========== HEADER ========== */
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 0 24px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            font-size: 32px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .logo-text span {
+            color: #4ade80;
+        }
+
+        .nav {
+            display: flex;
+            gap: 32px;
+        }
+
+        .nav a {
+            color: #a0a0a0;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+            padding: 8px 0;
+        }
+
+        .nav a:hover, .nav a.active {
+            color: white;
+            border-bottom: 2px solid #4ade80;
+        }
+
+        .user {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .notification {
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* ========== MAIN CONTENT ========== */
+        .main {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        /* ========== UPLOAD CARD ========== */
+        .upload-card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+
+        .upload-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 32px;
+            text-align: center;
+            color: white;
+        }
+
+        .upload-header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .upload-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .upload-area {
+            padding: 48px 32px;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .dropzone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 20px;
+            padding: 60px 40px;
+            background: #fafbfc;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .dropzone:hover, .dropzone.drag-over {
+            border-color: #4ade80;
+            background: #f0fdf4;
+        }
+
+        .dropzone-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .dropzone h3 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            color: #1e293b;
+        }
+
+        .dropzone p {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: #4ade80;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 16px;
+        }
+
+        .upload-btn:hover {
+            background: #22c55e;
+            transform: translateY(-1px);
+        }
+
+        /* ========== FILE INFO ========== */
+        .file-info {
+            background: #f8fafc;
+            margin: 24px 32px;
+            padding: 20px;
+            border-radius: 16px;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .file-info-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .file-icon {
+            font-size: 28px;
+        }
+
+        .file-name {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .file-size {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .file-preview {
+            background: #f1f5f9;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 12px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow: auto;
+            white-space: pre-wrap;
+        }
+
+        /* ========== JSON PREVIEW ========== */
+        .json-preview {
+            background: #1e293b;
+            color: #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow: auto;
+            margin: 24px 32px;
+            display: none;
+        }
+
+        .json-preview.show {
+            display: block;
+        }
+
+        .json-preview pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+
+        /* ========== ACTION BUTTONS ========== */
+        .action-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            padding: 24px 32px 32px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .btn-primary {
+            background: #4ade80;
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            background: #22c55e;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+            padding: 12px 32px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-primary:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        /* ========== SUCCESS MESSAGE ========== */
+        .success-message {
+            background: #dcfce7;
+            color: #16a34a;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin: 0 32px 24px;
+            text-align: center;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        /* ========== FOOTER ========== */
+        .footer {
+            text-align: center;
+            padding: 24px;
+            color: #666;
+            font-size: 12px;
+            border-top: 1px solid #e2e8f0;
+            margin-top: 40px;
+        }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 768px) {
+            .nav {
+                display: none;
+            }
+            .upload-header h1 {
+                font-size: 22px;
+            }
+            .dropzone {
+                padding: 40px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon">🚀</div>
+            <div class="logo-text">Web <span>Tool</span> Automation</div>
+        </div>
+        <div class="nav">
+            <a href="dashboard.html">📊 Dashboard</a>
+            <a href="upload.html" class="active">📁 Upload Task</a>
+            <a href="#">📋 Tasks</a>
+            <a href="#">🔗 Integrations</a>
+            <a href="#">📈 Reports</a>
+        </div>
+        <div class="user">
+            <div class="notification">🔔</div>
+            <div class="avatar">JD</div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main">
+
+        <div class="upload-card">
+            <div class="upload-header">
+                <h1>📁 Upload Task File</h1>
+                <p>Upload JSON file containing task data to create automation tasks</p>
+            </div>
+
+            <div class="upload-area">
+                <div class="dropzone" id="dropzone">
+                    <div class="dropzone-icon">📄</div>
+                    <h3>Drag & Drop your JSON file here</h3>
+                    <p>or click to browse</p>
+                    <input type="file" id="fileInput" class="file-input" accept=".json">
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                        📂 Choose File
+                    </button>
+                </div>
+            </div>
+
+            <div class="file-info" id="fileInfo">
+                <div class="file-info-header">
+                    <div class="file-icon">📄</div>
+                    <div>
+                        <div class="file-name" id="fileName">-</div>
+                        <div class="file-size" id="fileSize">-</div>
+                    </div>
+                </div>
+                <div class="file-preview" id="filePreview"></div>
+            </div>
+
+            <div class="json-preview" id="jsonPreview">
+                <pre id="jsonContent"></pre>
+            </div>
+
+            <div class="success-message" id="successMessage">
+                ✅ File uploaded successfully! Ready to process.
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn-secondary" id="clearBtn" style="display: none;">🗑️ Clear</button>
+                <button class="btn-primary" id="processBtn" style="display: none;">🚀 Process Task</button>
+            </div>
+        </div>
+
+        <!-- JSON FORMAT EXAMPLE -->
+        <div style="margin-top: 24px; background: white; border-radius: 20px; padding: 20px; border: 1px solid #e2e8f0;">
+            <h3 style="margin-bottom: 12px;">📋 JSON Format Example</h3>
+            <pre style="background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 12px; font-size: 12px; overflow-x: auto;">
+{
+    "task_name": "Implement Automation API",
+    "description": "Build REST API for Jira, Git, SharePoint, Confluence",
+    "priority": "HIGH",
+    "jira_config": {
+        "project_key": "PROJ",
+        "summary": "Implement Automation API",
+        "assignee": "john.doe@company.com",
+        "start_date": "2024-03-01",
+        "due_date": "2024-03-15",
+        "priority": "High"
+    },
+    "git_config": {
+        "repo_url": "https://github.com/company/repo",
+        "branch_prefix": "feature",
+        "base_branch": "main"
+    },
+    "sharepoint_config": {
+        "site_url": "https://company.sharepoint.com/sites/Projects",
+        "folder_name": "PROJ-123_Automation",
+        "template_id": "template-123"
+    },
+    "confluence_config": {
+        "space_key": "DEV",
+        "page_title": "PROJ-123 - Technical Documentation",
+        "parent_page_id": "12345"
+    }
+}
+            </pre>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>🚀 Web Tool Automation | Upload JSON to create automated tasks</p>
+    </div>
+
+    <script>
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const jsonPreview = document.getElementById('jsonPreview');
+        const fileNameSpan = document.getElementById('fileName');
+        const fileSizeSpan = document.getElementById('fileSize');
+        const filePreview = document.getElementById('filePreview');
+        const jsonContent = document.getElementById('jsonContent');
+        const clearBtn = document.getElementById('clearBtn');
+        const processBtn = document.getElementById('processBtn');
+        const successMessage = document.getElementById('successMessage');
+
+        let currentFile = null;
+        let currentJson = null;
+
+        // Drag & Drop events
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('drag-over');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('drag-over');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'application/json') {
+                handleFile(file);
+            } else {
+                alert('Please upload a JSON file');
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (fileInput.files.length > 0) {
+                handleFile(fileInput.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            currentFile = file;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const content = e.target.result;
+                    const json = JSON.parse(content);
+                    currentJson = json;
+                    
+                    // Display file info
+                    fileNameSpan.textContent = file.name;
+                    fileSizeSpan.textContent = (file.size / 1024).toFixed(2) + ' KB';
+                    filePreview.textContent = content.substring(0, 500) + (content.length > 500 ? '...' : '');
+                    
+                    // Display formatted JSON
+                    jsonContent.textContent = JSON.stringify(json, null, 2);
+                    
+                    // Show sections
+                    fileInfo.classList.add('show');
+                    jsonPreview.classList.add('show');
+                    clearBtn.style.display = 'inline-block';
+                    processBtn.style.display = 'inline-block';
+                    successMessage.classList.remove('show');
+                    
+                } catch (err) {
+                    alert('Invalid JSON file: ' + err.message);
+                    clearFile();
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function clearFile() {
+            currentFile = null;
+            currentJson = null;
+            fileInput.value = '';
+            fileInfo.classList.remove('show');
+            jsonPreview.classList.remove('show');
+            clearBtn.style.display = 'none';
+            processBtn.style.display = 'none';
+            successMessage.classList.remove('show');
+        }
+
+        clearBtn.addEventListener('click', clearFile);
+
+        processBtn.addEventListener('click', () => {
+            if (currentJson) {
+                successMessage.classList.add('show');
+                // TODO: Call backend API to process task
+                console.log('Processing task:', currentJson);
+                setTimeout(() => {
+                    successMessage.innerHTML = '✅ Task submitted! Backend will process soon.';
+                }, 1000);
+            }
+        });
+    </script>
+
+</body>
+</html>
