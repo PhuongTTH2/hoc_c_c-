@@ -1,0 +1,22 @@
+name: Test React App
+on: push
+
+jobs:
+  test:
+    runs-on: ubuntu-latest  # GitHub tạo máy ảo mới
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: npm install
+        
+      - name: Chạy app và test
+        run: |
+          npm start &           # App chạy trên máy ảo GitHub
+          npx wait-on http://localhost:3000
+          npm test              # Test cũng trên máy ảo đó
