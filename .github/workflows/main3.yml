@@ -1,0 +1,41 @@
+name: Chạy đa ứng dụng
+
+on: workflow_dispatch
+
+jobs:
+  multi-app:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Clone app thứ nhất (port 3000)
+        uses: actions/checkout@v4
+        with:
+          repository: 'username/app1'
+          path: './app1'
+      
+      - name: Clone app thứ hai (port 4000)
+        uses: actions/checkout@v4
+        with:
+          repository: 'username/app2'
+          path: './app2'
+      
+      - name: Cài đặt và chạy app1 (port 3000)
+        run: |
+          cd ./app1
+          npm install
+          npm start &
+          npx wait-on http://localhost:3000
+        shell: bash
+      
+      - name: Cài đặt và chạy app2 (port 4000)
+        run: |
+          cd ./app2
+          npm install
+          npm start -- --port 4000 &
+          npx wait-on http://localhost:4000
+        shell: bash
+      
+      - name: Kiểm tra cả hai app
+        run: |
+          curl http://localhost:3000
+          curl http://localhost:4000
