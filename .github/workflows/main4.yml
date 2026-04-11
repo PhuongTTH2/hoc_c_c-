@@ -1,0 +1,39 @@
+name: Test với nhiều app
+
+on: workflow_dispatch
+
+jobs:
+  setup-apps:
+    runs-on: ubuntu-latest
+    outputs:
+      apps-ready: ${{ steps.wait.outputs.ready }}
+    
+    steps:
+      - name: Clone và chạy app1
+        run: |
+          git clone https://github.com/username/app1.git
+          cd app1 && npm install && npm start &
+      
+      - name: Clone và chạy app2  
+        run: |
+          git clone https://github.com/username/app2.git
+          cd app2 && npm install && npm start -- --port 4000 &
+      
+      - name: Đợi apps ready
+        id: wait
+        run: |
+          npx wait-on http://localhost:3000 http://localhost:4000
+          echo "ready=true" >> $GITHUB_OUTPUT
+  
+  test-apps:
+    needs: setup-apps
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        port: [3000, 4000]
+    
+    steps:
+      - name: Test app trên port ${{ matrix.port }}
+        run: |
+          curl http://localhost:${{ matrix.port }}/health
+          echo "App ${{ matrix.port }} đang chạy tốt"
